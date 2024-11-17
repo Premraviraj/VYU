@@ -6,6 +6,7 @@ import HighchartsReact from 'highcharts-react-official';
 import { useGraphs } from '../../../context/GraphContext';
 import './GraphModal.css';
 import { ChromePicker } from 'react-color';
+import AvailableDataSection from './AvailableDataSection';
 
 // Initialize Highcharts modules
 HighchartsMore(Highcharts);
@@ -651,6 +652,12 @@ const GraphModal: React.FC<GraphModalProps> = ({ isOpen, onClose, selectedData, 
       }
     }
   };
+
+  const availableDataSection = (
+    <div className="available-data-section">
+      <AvailableDataSection />
+    </div>
+  );
 
   if (!isOpen) return null;
 

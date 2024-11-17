@@ -1,165 +1,128 @@
-import React, { useState } from 'react';
-import { useGraphs } from '../../../context/GraphContext';
-import { VehicleStats, vehicleData } from '../../../data/vehicleData';
-import GraphModal from './GraphModal';
-import { toast, ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import React, { useState, useEffect } from 'react';
+import Widget from './Widget';
+import CreateWidgetModal from './CreateWidgetModal';
 import './WidgetsPage.css';
 
+type WidgetType = 'bus' | 'car' | 'bike' | 'truck';
+
+interface WidgetData {
+  id: number;
+  title: string;
+  type: WidgetType;
+  isCustom?: boolean;
+  chartType?: string;
+  graphData?: {
+    config: any;
+    data: any[];
+  };
+}
+
+const defaultWidgets: WidgetData[] = [
+  { id: 1, title: 'Car Status', type: 'car' },
+  { id: 2, title: 'Bus Monitor', type: 'bus' },
+  { id: 3, title: 'Bike Status', type: 'bike' },
+  { id: 4, title: 'Truck Location', type: 'truck' }
+];
+
 const WidgetsPage: React.FC = () => {
-  const [isGraphModalOpen, setIsGraphModalOpen] = useState(false);
-  const [selectedData, setSelectedData] = useState<VehicleStats[]>([]);
-  const { addKPICard } = useGraphs();
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [widgets, setWidgets] = useState<WidgetData[]>(defaultWidgets);
 
-  const handleDataSelection = (vehicle: VehicleStats) => {
-    setSelectedData(prev => {
-      const isSelected = prev.some(v => v.vehicleType === vehicle.vehicleType);
-      if (isSelected) {
-        return prev.filter(v => v.vehicleType !== vehicle.vehicleType);
-      } else {
-        return [...prev, vehicle];
-      }
-    });
-  };
-
-  const handleCreateGraph = () => {
-    if (selectedData.length > 0) {
-      setIsGraphModalOpen(true);
+  // Load widgets from localStorage on component mount
+  useEffect(() => {
+    const savedWidgets = localStorage.getItem('dashboardWidgets');
+    if (savedWidgets) {
+      const parsedWidgets = JSON.parse(savedWidgets);
+      // Merge default widgets with saved custom widgets
+      const mergedWidgets = [
+        ...defaultWidgets,
+        ...parsedWidgets.filter((widget: WidgetData) => widget.isCustom)
+      ];
+      setWidgets(mergedWidgets);
     }
+  }, []);
+
+  // Save widgets to localStorage whenever they change
+  useEffect(() => {
+    // Only save custom widgets
+    const customWidgets = widgets.filter(widget => widget.isCustom);
+    localStorage.setItem('dashboardWidgets', JSON.stringify(customWidgets));
+  }, [widgets]);
+
+  const handleCreateWidget = (widgetName: string, chartType: string, graphData?: any) => {
+    const newWidget: WidgetData = {
+      id: Date.now(), // Use timestamp as unique ID
+      title: widgetName,
+      type: 'car',
+      isCustom: true,
+      chartType: chartType,
+      graphData: graphData
+    };
+    
+    setWidgets(prevWidgets => [...prevWidgets, newWidget]);
+    setIsCreateModalOpen(false);
   };
 
-  const handleCreateKPI = () => {
-    if (selectedData.length > 0) {
-      addKPICard(selectedData);
-      toast.success('KPI Card created successfully!', {
-        position: "top-right",
-        autoClose: 3000,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-      });
-      setSelectedData([]); // Reset selection after creating
-    }
-  };
-
-  const handleGraphCreated = () => {
-    toast.success('Graph created successfully!', {
-      position: "top-right",
-      autoClose: 3000,
-      hideProgressBar: false,
-      closeOnClick: true,
-      pauseOnHover: true,
-      draggable: true,
-    });
-    setSelectedData([]); // Reset selection after creating
+  const handleDeleteWidget = (widgetId: number) => {
+    setWidgets(prevWidgets => prevWidgets.filter(widget => 
+      !widget.isCustom || widget.id !== widgetId
+    ));
   };
 
   return (
-    <div className="widgets-page">
-      <ToastContainer />
-      <h1>Widgets</h1>
-
-      <div className="data-selection-section">
-        <h2>Select Data</h2>
-        <div className="data-grid">
-          {vehicleData.map((vehicle) => (
-            <div
-              key={vehicle.vehicleType}
-              className={`data-card ${selectedData.some(v => v.vehicleType === vehicle.vehicleType) ? 'selected' : ''}`}
-              onClick={() => handleDataSelection(vehicle)}
-            >
-              <div className="data-header">
-                <h3>{vehicle.vehicleType}</h3>
-                <span className="last-updated">Updated: {vehicle.lastUpdated}</span>
-              </div>
-              <div className="data-stats">
-                <div className="stat-item total">
-                  <span className="stat-value">{vehicle.count}</span>
-                  <span className="stat-label">Total</span>
-                </div>
-                <div className="stat-item in">
-                  <span className="stat-value">{vehicle.in}</span>
-                  <span className="stat-label">In</span>
-                </div>
-                <div className="stat-item out">
-                  <span className="stat-value">{vehicle.out}</span>
-                  <span className="stat-label">Out</span>
-                </div>
-              </div>
-              <div className="time-details">
-                <div className="time-period">
-                  <h4>Morning</h4>
-                  <div className="time-stats">
-                    <span className="in">In: {vehicle.details.morning.in}</span>
-                    <span className="out">Out: {vehicle.details.morning.out}</span>
-                  </div>
-                </div>
-                <div className="time-period">
-                  <h4>Afternoon</h4>
-                  <div className="time-stats">
-                    <span className="in">In: {vehicle.details.afternoon.in}</span>
-                    <span className="out">Out: {vehicle.details.afternoon.out}</span>
-                  </div>
-                </div>
-                <div className="time-period">
-                  <h4>Evening</h4>
-                  <div className="time-stats">
-                    <span className="in">In: {vehicle.details.evening.in}</span>
-                    <span className="out">Out: {vehicle.details.evening.out}</span>
-                  </div>
-                </div>
-                <div className="time-period">
-                  <h4>Night</h4>
-                  <div className="time-stats">
-                    <span className="in">In: {vehicle.details.night.in}</span>
-                    <span className="out">Out: {vehicle.details.night.out}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
+    <div className="widgets-container">
+      <div className="widgets-header">
+        <h1>Vehicle Monitoring</h1>
+        <p>Track and monitor all vehicle systems</p>
       </div>
       
-      <div className="widgets-section">
-        <h2>Create Widgets</h2>
-        <div className="widgets-grid">
-          <div 
-            className={`widget-card ${selectedData.length === 0 ? 'disabled' : ''}`}
-            onClick={handleCreateGraph}
-          >
-            <div className="widget-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="icon">
-                <path d="M4 20h16M4 20V4m0 16l4-4v4m4 0V10m0 10l4-8v8m4 0V6l-4 14" 
-                  strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </div>
-            <h3>Create Graph</h3>
-            <p>Generate custom graphs from selected data</p>
-          </div>
+      <div className="widgets-grid">
+        {widgets.map(widget => (
+          <Widget 
+            key={widget.id}
+            title={widget.title}
+            type={widget.type}
+            isCustom={widget.isCustom}
+            chartType={widget.chartType}
+            graphData={widget.graphData}
+            onDelete={widget.isCustom ? () => handleDeleteWidget(widget.id) : undefined}
+          />
+        ))}
+      </div>
 
-          <div 
-            className={`widget-card ${selectedData.length === 0 ? 'disabled' : ''}`}
-            onClick={handleCreateKPI}
-          >
-            <div className="widget-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="icon">
-                <path d="M16 8v8m-8-8v8M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" 
-                  strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
+      {/* Create Widget Section */}
+      <div className="section-divider"></div>
+      <div className="create-widget-section">
+        <div className="section-header">
+          <h2>Create Custom Widget</h2>
+          <p>Design and configure your own monitoring widget</p>
+        </div>
+        <div className="create-widget-grid">
+          <div className="create-widget-card">
+            <div className="create-widget-icon">
+              <i className="fas fa-chart-bar"></i>
             </div>
-            <h3>Create KPI Card</h3>
-            <p>Create KPI cards from selected data</p>
+            <h3>Custom Analytics</h3>
+            <p>Create a new analytics widget</p>
+            <div className="analytics-preview">
+              <i className="fas fa-chart-line"></i>
+              <i className="fas fa-chart-pie"></i>
+              <i className="fas fa-chart-area"></i>
+            </div>
+            <button 
+              className="create-button"
+              onClick={() => setIsCreateModalOpen(true)}
+            >
+              <i className="fas fa-plus"></i> Create Widget
+            </button>
           </div>
         </div>
       </div>
 
-      <GraphModal
-        isOpen={isGraphModalOpen}
-        onClose={() => setIsGraphModalOpen(false)}
-        selectedData={selectedData}
-        onGraphCreated={handleGraphCreated}
+      <CreateWidgetModal 
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onCreateWidget={handleCreateWidget}
       />
     </div>
   );

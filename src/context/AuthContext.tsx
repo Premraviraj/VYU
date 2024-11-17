@@ -1,27 +1,29 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 
+type UserRole = "admin" | "user";
+
 interface AuthContextType {
+  login: (username: string, password: string) => void;
+  userRole: UserRole | null;
   isAuthenticated: boolean;
-  userRole: 'admin' | 'user' | null;
-  login: (role: 'admin' | 'user', redirectPath?: string) => void;
   logout: () => void;
+  changePassword: (currentPassword: string, newPassword: string) => boolean;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+export const AuthContext = createContext<AuthContextType>({} as AuthContextType);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
     return localStorage.getItem('isAuthenticated') === 'true';
   });
   
-  const [userRole, setUserRole] = useState<'admin' | 'user' | null>(() => {
-    return (localStorage.getItem('userRole') as 'admin' | 'user' | null) || null;
+  const [userRole, setUserRole] = useState<UserRole | null>(() => {
+    return (localStorage.getItem('userRole') as UserRole) || null;
   });
   
   const navigate = useNavigate();
 
-  // Persist auth state to localStorage when it changes
   useEffect(() => {
     localStorage.setItem('isAuthenticated', isAuthenticated.toString());
     if (userRole) {
@@ -31,27 +33,21 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   }, [isAuthenticated, userRole]);
 
-  // Check and redirect based on auth state
   useEffect(() => {
     const path = window.location.pathname;
     const lastPath = localStorage.getItem('lastPath');
 
     if (isAuthenticated && userRole) {
       if (path === '/login') {
-        // If on login page, redirect to last path or default path based on role
         const defaultPath = userRole === 'admin' ? '/localconfig/dashboard' : '/localhost';
         navigate(lastPath || defaultPath);
       } else if (path === '/') {
-        // If on root, redirect to appropriate dashboard
         navigate(userRole === 'admin' ? '/localconfig/dashboard' : '/localhost');
       } else if (userRole === 'user' && path.includes('/localconfig')) {
-        // If user tries to access admin routes
         navigate('/localhost');
       } else if (userRole === 'admin' && path === '/localhost') {
-        // If admin tries to access user routes
         navigate('/localconfig/dashboard');
       } else {
-        // Store current valid path
         localStorage.setItem('lastPath', path);
       }
     } else if (!isAuthenticated && path !== '/login') {
@@ -59,27 +55,47 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   }, [isAuthenticated, userRole, navigate]);
 
-  const login = (role: 'admin' | 'user', redirectPath?: string) => {
-    setIsAuthenticated(true);
-    setUserRole(role);
-    const defaultPath = role === 'admin' ? '/localconfig/dashboard' : '/localhost';
-    const path = redirectPath || defaultPath;
-    localStorage.setItem('lastPath', path);
-    navigate(path);
+  const login = (username: string, password: string) => {
+    if (username === 'admin' && password === 'admin123') {
+      setIsAuthenticated(true);
+      setUserRole('admin');
+      localStorage.setItem('lastLoginTime', new Date().toLocaleString());
+      return;
+    }
+
+    if (username === 'user' && password === 'user123') {
+      setIsAuthenticated(true);
+      setUserRole('user');
+      localStorage.setItem('lastLoginTime', new Date().toLocaleString());
+      return;
+    }
+
+    setIsAuthenticated(false);
+    setUserRole(null);
   };
 
   const logout = () => {
     setIsAuthenticated(false);
     setUserRole(null);
-    // Clear localStorage
     localStorage.removeItem('isAuthenticated');
     localStorage.removeItem('userRole');
     localStorage.removeItem('lastPath');
     navigate('/login', { replace: true });
   };
 
+  const changePassword = (currentPassword: string, newPassword: string): boolean => {
+    const username = userRole === 'admin' ? 'admin' : 'user';
+    const correctCurrentPassword = userRole === 'admin' ? 'admin123' : 'user123';
+
+    if (currentPassword === correctCurrentPassword) {
+      localStorage.setItem(`${username}Password`, newPassword);
+      return true;
+    }
+    return false;
+  };
+
   return (
-    <AuthContext.Provider value={{ isAuthenticated, userRole, login, logout }}>
+    <AuthContext.Provider value={{ login, userRole, isAuthenticated, logout, changePassword }}>
       {children}
     </AuthContext.Provider>
   );

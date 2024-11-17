@@ -11,7 +11,6 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import AdminSettings from './components/pages/settings/AdminSettings';
 import UserSettings from './components/pages/settings/UserSettings';
 
-// Protected Route wrapper component
 const ProtectedRoute: React.FC<{ 
   children: React.ReactNode;
   allowedRole?: 'admin' | 'user';
@@ -24,18 +23,32 @@ const ProtectedRoute: React.FC<{
   }
 
   if (allowedRole && userRole !== allowedRole) {
-    return <Navigate to={userRole === 'admin' ? '/localconfig/dashboard' : '/localhost'} replace />;
+    return <Navigate to={userRole === 'admin' ? '/localconfig/dashboard' : '/localhost/dashboard'} replace />;
   }
 
   return <>{children}</>;
 };
 
 const AppRoutes: React.FC = () => {
+  const { isAuthenticated, userRole } = useAuth();
+
   return (
     <Routes>
       {/* Public routes */}
-      <Route path="/" element={<Navigate to="/login" replace />} />
-      <Route path="/login" element={<LoginPage />} />
+      <Route path="/" element={
+        isAuthenticated ? (
+          <Navigate to={userRole === 'admin' ? '/localconfig/dashboard' : '/localhost/dashboard'} replace />
+        ) : (
+          <Navigate to="/login" replace />
+        )
+      } />
+      <Route path="/login" element={
+        isAuthenticated ? (
+          <Navigate to={userRole === 'admin' ? '/localconfig/dashboard' : '/localhost/dashboard'} replace />
+        ) : (
+          <LoginPage />
+        )
+      } />
       
       {/* Admin routes */}
       <Route path="/localconfig" element={
@@ -60,6 +73,7 @@ const AppRoutes: React.FC = () => {
         </ProtectedRoute>
       }>
         <Route path="dashboard" element={<UserHomePage />} />
+        <Route path="widgets" element={<WidgetsPage />} />
         <Route path="settings" element={<UserSettings />} />
       </Route>
 
