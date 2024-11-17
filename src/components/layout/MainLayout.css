@@ -1,0 +1,38 @@
+.main-layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+.main-content {
+  flex: 1;
+  margin-left: 50px; /* Width of the sidebar */
+  padding: 0;
+  background-color: #f9fafb;
+  min-height: 100vh;
+  overflow-x: hidden;
+  display: flex;
+  margin-left: 0; /* Remove margin */
+  padding-left: 120px; /* Use padding instead of margin */
+}
+
+/* Remove container max-width to allow content to fill space */
+.content-container {
+  width: 100%;
+  padding: 0;
+}
+
+/* Ensure content touches sidebar */
+.widgets-page,
+.dashboard-container {
+  padding-left: 0;
+  padding-right: 1rem;
+  width: 100%;
+}
+
+/* Add container max-width for better content alignment */
+.content-container {
+  max-width: 1400px; /* Reduced max-width */
+  margin: 0;
+  width: 100%;
+  padding: 0.5rem; /* Minimal padding */
+} 

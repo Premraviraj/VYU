@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { VehicleStats } from '../data/vehicleData';
 
 interface KPICard {
@@ -13,23 +13,72 @@ interface KPICard {
   type: string;
 }
 
+interface Graph {
+  title: string;
+  svg: string;
+}
+
 interface GraphContextType {
-  generatedGraphs: string[];
+  generatedGraphs: Graph[];
   kpiCards: KPICard[];
-  addGraph: (svg: string) => void;
+  addGraph: (title: string, svg: string) => void;
   removeGraph: (index: number) => void;
   addKPICard: (data: VehicleStats[]) => void;
   removeKPICard: (id: string) => void;
+  dashboardLayout: any[];
+  userDashboardLayout: any[];
+  setDashboardLayout: (layout: any[]) => void;
+  setUserDashboardLayout: (layout: any[]) => void;
 }
 
 const GraphContext = createContext<GraphContextType | undefined>(undefined);
 
-export const GraphProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [generatedGraphs, setGeneratedGraphs] = useState<string[]>([]);
-  const [kpiCards, setKPICards] = useState<KPICard[]>([]);
+// Create a custom event for widget updates
+const widgetUpdateEvent = new CustomEvent('widgetUpdate');
 
-  const addGraph = (svg: string) => {
-    setGeneratedGraphs(prev => [...prev, svg]);
+export const GraphProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  // Initialize states from localStorage
+  const [generatedGraphs, setGeneratedGraphs] = useState<Graph[]>(() => {
+    const savedGraphs = localStorage.getItem('generatedGraphs');
+    return savedGraphs ? JSON.parse(savedGraphs) : [];
+  });
+
+  const [kpiCards, setKPICards] = useState<KPICard[]>(() => {
+    const savedKPIs = localStorage.getItem('kpiCards');
+    return savedKPIs ? JSON.parse(savedKPIs) : [];
+  });
+
+  const [dashboardLayout, setDashboardLayout] = useState(() => {
+    const savedLayout = localStorage.getItem('dashboardLayout');
+    return savedLayout ? JSON.parse(savedLayout) : [];
+  });
+
+  const [userDashboardLayout, setUserDashboardLayout] = useState(() => {
+    const savedLayout = localStorage.getItem('userDashboardLayout');
+    return savedLayout ? JSON.parse(savedLayout) : [];
+  });
+
+  // Save to localStorage and dispatch event when state changes
+  useEffect(() => {
+    localStorage.setItem('generatedGraphs', JSON.stringify(generatedGraphs));
+    window.dispatchEvent(widgetUpdateEvent);
+  }, [generatedGraphs]);
+
+  useEffect(() => {
+    localStorage.setItem('kpiCards', JSON.stringify(kpiCards));
+    window.dispatchEvent(widgetUpdateEvent);
+  }, [kpiCards]);
+
+  useEffect(() => {
+    localStorage.setItem('dashboardLayout', JSON.stringify(dashboardLayout));
+  }, [dashboardLayout]);
+
+  useEffect(() => {
+    localStorage.setItem('userDashboardLayout', JSON.stringify(userDashboardLayout));
+  }, [userDashboardLayout]);
+
+  const addGraph = (title: string, svg: string) => {
+    setGeneratedGraphs(prev => [...prev, { title, svg }]);
   };
 
   const removeGraph = (index: number) => {
@@ -63,7 +112,11 @@ export const GraphProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       addGraph, 
       removeGraph,
       addKPICard,
-      removeKPICard
+      removeKPICard,
+      dashboardLayout,
+      userDashboardLayout,
+      setDashboardLayout,
+      setUserDashboardLayout
     }}>
       {children}
     </GraphContext.Provider>

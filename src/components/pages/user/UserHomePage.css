@@ -1,0 +1,142 @@
+.user-layout {
+  display: flex;
+  min-height: 100vh;
+  background-color: #f9fafb;
+}
+
+.user-content {
+  flex: 1;
+  margin-left: 0;
+  padding-left: 80px;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+.user-container {
+  padding: 2rem;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.user-container h1 {
+  color: #111827;
+  margin-bottom: 2rem;
+  font-size: 1.875rem;
+  font-weight: 600;
+}
+
+/* Grid Layout styles */
+.layout {
+  min-height: calc(100% - 4rem);
+}
+
+.widget-container {
+  background: white;
+  border-radius: 0.75rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  height: 100%;
+}
+
+.card-header {
+  padding: 1rem;
+  background: #f8f9fa;
+  border-bottom: 1px solid #e9ecef;
+  cursor: move;
+}
+
+.card-header h3 {
+  margin: 0;
+  color: #111827;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.card-content {
+  padding: 1.5rem;
+  height: calc(100% - 57px);
+}
+
+.main-stat {
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.value {
+  display: block;
+  font-size: 2rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.label {
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.stat {
+  text-align: center;
+  padding: 1rem;
+  background: #f9fafb;
+  border-radius: 0.5rem;
+}
+
+.stat.in .value {
+  color: #059669;
+}
+
+.stat.out .value {
+  color: #dc2626;
+}
+
+.graph-content {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.no-widgets-message {
+  text-align: center;
+  padding: 3rem;
+  background: white;
+  border-radius: 0.75rem;
+  color: #6b7280;
+}
+
+/* React Grid Layout styles */
+.react-grid-item.react-grid-placeholder {
+  background: #6B4DE6;
+  opacity: 0.2;
+  border-radius: 0.75rem;
+  transition-duration: 100ms;
+}
+
+.react-resizable-handle {
+  background-image: none !important;
+  border-right: 2px solid #6B4DE6;
+  border-bottom: 2px solid #6B4DE6;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.widget-container:hover .react-resizable-handle {
+  opacity: 0.5;
+}
+
+@media (max-width: 768px) {
+  .user-content {
+    padding-left: 56px;
+  }
+
+  .user-container {
+    padding: 1rem;
+  }
+}
+ 

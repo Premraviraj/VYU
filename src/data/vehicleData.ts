@@ -14,81 +14,68 @@ export interface VehicleStats {
 
 export const vehicleData: VehicleStats[] = [
   {
-    vehicleType: 'Cars',
+    vehicleType: "Car",
     count: 150,
-    in: 85,
-    out: 65,
-    lastUpdated: '2024-03-20 15:30',
+    in: 90,
+    out: 60,
+    lastUpdated: new Date().toLocaleString(),
     details: {
-      morning: { in: 30, out: 15 },
-      afternoon: { in: 25, out: 20 },
-      evening: { in: 20, out: 25 },
-      night: { in: 10, out: 5 }
+      morning: { in: 30, out: 10 },
+      afternoon: { in: 20, out: 15 },
+      evening: { in: 25, out: 20 },
+      night: { in: 15, out: 15 }
     }
   },
   {
-    vehicleType: 'Bikes',
-    count: 200,
-    in: 120,
-    out: 80,
-    lastUpdated: '2024-03-20 15:30',
-    details: {
-      morning: { in: 45, out: 20 },
-      afternoon: { in: 35, out: 25 },
-      evening: { in: 25, out: 30 },
-      night: { in: 15, out: 5 }
-    }
-  },
-  {
-    vehicleType: 'Trucks',
-    count: 45,
-    in: 25,
-    out: 20,
-    lastUpdated: '2024-03-20 15:30',
-    details: {
-      morning: { in: 8, out: 5 },
-      afternoon: { in: 7, out: 6 },
-      evening: { in: 6, out: 7 },
-      night: { in: 4, out: 2 }
-    }
-  },
-  {
-    vehicleType: 'Buses',
-    count: 30,
-    in: 18,
-    out: 12,
-    lastUpdated: '2024-03-20 15:30',
-    details: {
-      morning: { in: 6, out: 3 },
-      afternoon: { in: 5, out: 4 },
-      evening: { in: 4, out: 3 },
-      night: { in: 3, out: 2 }
-    }
-  },
-  {
-    vehicleType: 'Delivery Vans',
+    vehicleType: "Truck",
     count: 80,
     in: 45,
     out: 35,
-    lastUpdated: '2024-03-20 15:30',
+    lastUpdated: new Date().toLocaleString(),
     details: {
-      morning: { in: 15, out: 10 },
-      afternoon: { in: 12, out: 10 },
-      evening: { in: 10, out: 12 },
-      night: { in: 8, out: 3 }
+      morning: { in: 15, out: 5 },
+      afternoon: { in: 10, out: 10 },
+      evening: { in: 12, out: 12 },
+      night: { in: 8, out: 8 }
     }
   },
   {
-    vehicleType: 'Persons',
-    count: 500,
-    in: 300,
-    out: 200,
-    lastUpdated: '2024-03-20 15:30',
+    vehicleType: "Motorcycle",
+    count: 100,
+    in: 60,
+    out: 40,
+    lastUpdated: new Date().toLocaleString(),
     details: {
-      morning: { in: 100, out: 50 },
-      afternoon: { in: 85, out: 60 },
-      evening: { in: 75, out: 70 },
-      night: { in: 40, out: 20 }
+      morning: { in: 20, out: 8 },
+      afternoon: { in: 15, out: 12 },
+      evening: { in: 15, out: 12 },
+      night: { in: 10, out: 8 }
+    }
+  },
+  {
+    vehicleType: "Bus",
+    count: 50,
+    in: 30,
+    out: 20,
+    lastUpdated: new Date().toLocaleString(),
+    details: {
+      morning: { in: 10, out: 5 },
+      afternoon: { in: 8, out: 5 },
+      evening: { in: 7, out: 6 },
+      night: { in: 5, out: 4 }
+    }
+  },
+  {
+    vehicleType: "Van",
+    count: 70,
+    in: 40,
+    out: 30,
+    lastUpdated: new Date().toLocaleString(),
+    details: {
+      morning: { in: 12, out: 8 },
+      afternoon: { in: 10, out: 7 },
+      evening: { in: 10, out: 8 },
+      night: { in: 8, out: 7 }
     }
   }
 ]; 

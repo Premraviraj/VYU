@@ -1,7 +1,6 @@
+/* Base container styles */
 .dashboard-container {
-  padding: 2rem;
-  height: calc(100vh - 4rem);
-  overflow: hidden;
+  padding: 0.5rem;
 }
 
 .dashboard-container h1 {
@@ -11,6 +10,7 @@
 
 /* Grid Layout styles */
 .layout {
+  margin: 0;
   min-height: calc(100% - 4rem);
 }
 
@@ -21,6 +21,14 @@
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   border: 1px solid #e5e7eb;
   transition: box-shadow 0.2s, border-color 0.2s;
+  resize: both;
+  overflow: auto;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+.grid-item::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
 }
 
 .grid-item:hover {
@@ -32,17 +40,7 @@
   cursor: grabbing;
 }
 
-/* Hide scrollbars but keep functionality */
-.grid-item {
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* IE and Edge */
-}
-
-.grid-item::-webkit-scrollbar {
-  display: none; /* Chrome, Safari, Opera */
-}
-
-/* Custom resize styling */
+/* Resize handle styles */
 .react-resizable {
   position: relative;
 }
@@ -74,11 +72,6 @@
   opacity: 1;
 }
 
-.grid-item {
-  resize: both;
-  overflow: auto;
-}
-
 .grid-item:hover::after {
   content: '';
   position: absolute;
@@ -89,23 +82,20 @@
   cursor: se-resize;
   background: linear-gradient(135deg, transparent 50%, #6B4DE6 50%);
   border-bottom-right-radius: 0.5rem;
-  opacity: 0.5;
-  transition: opacity 0.2s;
-}
-
-.grid-item:hover::after {
   opacity: 1;
 }
 
+/* Card styles */
 .card-header {
-  padding: 1rem;
+  position: relative;
+  z-index: 2;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid #e5e7eb;
-  background-color: white;
-  cursor: grab;
-  user-select: none;
+  padding: 12px 16px;
+  background: #f8f9fa;
+  border-bottom: 1px solid #e9ecef;
+  pointer-events: auto;
 }
 
 .card-header:active {
@@ -114,29 +104,47 @@
 
 .card-header h3 {
   margin: 0;
-  color: #374151;
-  font-size: 1rem;
-}
-
-.remove-btn {
-  background: none;
-  border: none;
-  font-size: 1.5rem;
-  color: #6b7280;
-  cursor: pointer;
-  padding: 0.25rem;
-  border-radius: 0.25rem;
-  line-height: 1;
-}
-
-.remove-btn:hover {
-  background-color: #f3f4f6;
-  color: #dc2626;
+  font-size: 16px;
+  color: #343a40;
+  flex: 1;
 }
 
 .card-content {
-  padding: 1rem;
-  height: calc(100% - 60px);
+  padding: 16px;
+  height: calc(100% - 53px);
+}
+
+/* Remove button styles */
+.remove-btn {
+  position: relative;
+  z-index: 10;
+  background: none;
+  border: none;
+  color: #6c757d;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 4px 12px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  touch-action: none;
+  user-select: none;
+}
+
+.remove-btn:hover {
+  color: #dc3545;
+  background-color: rgba(220, 53, 69, 0.1);
+}
+
+.remove-btn:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(220, 53, 69, 0.2);
+}
+
+.remove-btn:active {
+  transform: scale(0.95);
 }
 
 /* KPI Card specific styles */
@@ -181,35 +189,11 @@
   font-size: 1.25rem;
 }
 
-.trend {
-  text-align: center;
-}
-
-.trend-indicator {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.25rem 0.5rem;
-  border-radius: 9999px;
-  font-size: 0.875rem;
-  font-weight: 500;
-}
-
-.trend-indicator.positive {
-  background-color: #ecfdf5;
-  color: #059669;
-}
-
-.trend-indicator.negative {
-  background-color: #fef2f2;
-  color: #dc2626;
-}
-
-/* Graph Card specific styles */
+/* Graph specific styles */
 .graph-content {
-  height: calc(100% - 60px);
   display: flex;
-  align-items: center;
   justify-content: center;
+  align-items: center;
 }
 
 .graph-content > div {
@@ -222,15 +206,22 @@
   height: 100%;
 }
 
+/* Widget container styles */
+.widget-container {
+  position: relative;
+  height: 100%;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  pointer-events: auto;
+}
+
 /* Empty state */
 .no-content {
   text-align: center;
-  padding: 3rem;
-  background-color: white;
-  border-radius: 0.5rem;
-  color: #6b7280;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  margin-top: 2rem;
+  padding: 40px;
+  color: #6c757d;
 }
 
 /* React Grid Layout styles */
@@ -239,4 +230,17 @@
   opacity: 0.2;
   border-radius: 0.5rem;
   transition-duration: 100ms;
-} 
+}
+
+/* Add solid background for widgets */
+.react-grid-item {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+/* Adjust grid spacing */
+.react-grid-layout {
+  margin: 0 !important;
+}

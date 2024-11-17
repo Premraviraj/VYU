@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useGraphs } from '../../../context/GraphContext';
 import { Responsive, WidthProvider, Layout } from 'react-grid-layout';
 import 'react-grid-layout/css/styles.css';
@@ -16,87 +16,138 @@ interface LayoutItem extends Layout {
 
 const DashboardPage: React.FC = () => {
   const { generatedGraphs, removeGraph, kpiCards, removeKPICard } = useGraphs();
-  const [layouts, setLayouts] = useState<{ [key: string]: LayoutItem[] }>({});
   const graphRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
+  
+  // Initialize layout from localStorage
+  const [currentLayout, setCurrentLayout] = useState<LayoutItem[]>(() => {
+    const savedLayout = localStorage.getItem('dashboardLayout');
+    return savedLayout ? JSON.parse(savedLayout) : [];
+  });
 
-  const generateLayout = () => {
-    const layout = [
-      // KPI cards layout
-      ...kpiCards.map((_, index) => ({
-        i: `kpi-${index}`,
-        x: (index % 3) * 4,
-        y: Math.floor(index / 3) * 4,
-        w: 4,
-        h: 3,
-        minW: 3,
-        maxW: 6,
-        minH: 3,
-        maxH: 4,
-        static: false
-      })),
-      // Graphs layout
-      ...generatedGraphs.map((_, index) => ({
-        i: `graph-${index}`,
-        x: (index % 2) * 6,
-        y: Math.floor(index / 2) * 6 + Math.ceil(kpiCards.length / 3) * 4,
-        w: 6,
-        h: 5,
-        minW: 4,
-        maxW: 12,
-        minH: 4,
-        maxH: 8,
-        static: false
-      }))
-    ];
-    return layout;
+  // Save layout to localStorage when it changes
+  useEffect(() => {
+    localStorage.setItem('dashboardLayout', JSON.stringify(currentLayout));
+  }, [currentLayout]);
+
+  // Fixed parameter order - required parameters first, optional parameters last
+  const handleRemoveWidget = (type: 'graph' | 'kpi', index: number, event: React.MouseEvent, id?: string) => {
+    // Prevent drag and other events
+    event.preventDefault();
+    event.stopPropagation();
+    
+    // First, remove from layout
+    const widgetId = `${type}-${index}`;
+    setCurrentLayout(prev => prev.filter(item => item.i !== widgetId));
+
+    // Then, remove from data
+    if (type === 'graph') {
+      removeGraph(index);
+    } else {
+      if (id) removeKPICard(id);
+    }
+
+    // Clean up refs if it's a graph
+    if (type === 'graph') {
+      delete graphRefs.current[widgetId];
+    }
   };
 
-  const handleLayoutChange = (currentLayout: Layout[], allLayouts: { [key: string]: Layout[] }) => {
-    setLayouts(allLayouts as { [key: string]: LayoutItem[] });
+  // Generate initial layout for new items only
+  const generateLayoutForNewItems = (): LayoutItem[] => {
+    const existingIds = new Set(currentLayout.map(item => item.i));
+    const newLayout: LayoutItem[] = [...currentLayout];
+
+    // Add layout for new KPI cards
+    kpiCards.forEach((_, index) => {
+      const id = `kpi-${index}`;
+      if (!existingIds.has(id)) {
+        newLayout.push({
+          i: id,
+          x: (index % 3) * 4,
+          y: Math.floor(index / 3) * 4,
+          w: 4,
+          h: 3,
+          minW: 3,
+          maxW: 6,
+          minH: 3,
+          maxH: 4,
+          static: false
+        });
+      }
+    });
+
+    // Add layout for new graphs
+    generatedGraphs.forEach((_, index) => {
+      const id = `graph-${index}`;
+      if (!existingIds.has(id)) {
+        newLayout.push({
+          i: id,
+          x: (index % 2) * 6,
+          y: Math.floor(index / 2) * 6 + Math.ceil(kpiCards.length / 3) * 4,
+          w: 6,
+          h: 5,
+          minW: 4,
+          maxW: 12,
+          minH: 4,
+          maxH: 8,
+          static: false
+        });
+      }
+    });
+
+    return newLayout;
+  };
+
+  // Update layout when items change
+  useEffect(() => {
+    setCurrentLayout(generateLayoutForNewItems());
+  }, [kpiCards.length, generatedGraphs.length]);
+
+  const handleLayoutChange = (newLayout: Layout[]) => {
+    setCurrentLayout(newLayout as LayoutItem[]);
   };
 
   const gridItems = [
     ...kpiCards.map((card, index) => (
-      <div key={`kpi-${index}`} data-grid={{ 
-        x: (index % 3) * 4,
-        y: Math.floor(index / 3) * 4,
-        w: 4,
-        h: 3,
-        minW: 3,
-        maxW: 6,
-        minH: 3,
-        maxH: 4
-      }}>
+      <div key={`kpi-${index}`} className="widget-container">
         <div className="card-header">
           <h3>{card.title}</h3>
           <button
             className="remove-btn"
-            onClick={() => removeKPICard(card.id)}
+            onClick={(e) => handleRemoveWidget('kpi', index, e, card.id)}
+            onMouseDown={(e) => e.stopPropagation()}
+            aria-label="Remove widget"
           >
             ×
           </button>
         </div>
         <div className="card-content">
-          {/* KPI card content */}
+          <div className="main-stat">
+            <span className="value">{card.data.total}</span>
+            <span className="label">Total Vehicles</span>
+          </div>
+          <div className="stats-grid">
+            <div className="stat in">
+              <span className="value">{card.data.in}</span>
+              <span className="label">In</span>
+            </div>
+            <div className="stat out">
+              <span className="value">{card.data.out}</span>
+              <span className="label">Out</span>
+            </div>
+          </div>
         </div>
       </div>
     )),
-    ...generatedGraphs.map((graphSvg, index) => (
-      <div key={`graph-${index}`} data-grid={{
-        x: (index % 2) * 6,
-        y: Math.floor(index / 2) * 6 + Math.ceil(kpiCards.length / 3) * 4,
-        w: 6,
-        h: 5,
-        minW: 4,
-        maxW: 12,
-        minH: 4,
-        maxH: 8
-      }}>
+    ...generatedGraphs.map((graph, index) => (
+      <div key={`graph-${index}`} className="widget-container">
         <div className="card-header">
-          <h3>Generated Graph {index + 1}</h3>
+          <h3>{graph.title || `Graph ${index + 1}`}</h3>
           <button
             className="remove-btn"
-            onClick={() => removeGraph(index)}
+            onClick={(e) => handleRemoveWidget('graph', index, e)}
+            onMouseDown={(e) => e.stopPropagation()}
+            aria-label="Remove widget"
           >
             ×
           </button>
@@ -104,7 +155,7 @@ const DashboardPage: React.FC = () => {
         <div 
           ref={el => graphRefs.current[`graph-${index}`] = el}
           className="card-content graph-content"
-          dangerouslySetInnerHTML={{ __html: graphSvg }}
+          dangerouslySetInnerHTML={{ __html: graph.svg }}
         />
       </div>
     ))
@@ -118,7 +169,7 @@ const DashboardPage: React.FC = () => {
         <div style={{ width: '100%', position: 'relative' }}>
           <ResponsiveGridLayout
             className="layout"
-            layouts={{ lg: generateLayout() }}
+            layouts={{ lg: currentLayout }}
             breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
             cols={{ lg: 12, md: 10, sm: 6, xs: 4, xxs: 2 }}
             rowHeight={100}
@@ -128,7 +179,7 @@ const DashboardPage: React.FC = () => {
             isDraggable={true}
             isResizable={true}
             onLayoutChange={handleLayoutChange}
-            compactType="vertical"
+            compactType={null}
           >
             {gridItems}
           </ResponsiveGridLayout>
