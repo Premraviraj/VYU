@@ -6,6 +6,7 @@ import HighchartsReact from 'highcharts-react-official';
 import { useGraphs } from '../../../context/GraphContext';
 import './GraphModal.css';
 import { ChromePicker } from 'react-color';
+import { useWidgets } from '../../../context/WidgetContext';
 
 // Initialize Highcharts modules
 HighchartsMore(Highcharts);
@@ -31,10 +32,22 @@ const GraphModal: React.FC<GraphModalProps> = ({ isOpen, onClose, selectedData, 
   const [selectedGraphType, setSelectedGraphType] = useState<GraphType>('line');
   const [chartOptions, setChartOptions] = useState<Highcharts.Options | null>(null);
   const { addGraph } = useGraphs();
+  const { addWidget } = useWidgets();
   const [graphTitle, setGraphTitle] = useState('');
+  const [selectedColor, setSelectedColor] = useState('#ffffff');
   
-  // Initialize colors with a default state
-  const [colors, setColors] = useState<ColorState>({});
+  // Initialize colors with default values
+  const [colors, setColors] = useState<ColorState>(() => {
+    const initialColors: ColorState = {};
+    selectedData.forEach((_, index) => {
+      initialColors[`vehicle-${index}`] = {
+        total: getDefaultColor(index * 3),
+        in: getDefaultColor(index * 3 + 1),
+        out: getDefaultColor(index * 3 + 2)
+      };
+    });
+    return initialColors;
+  });
   
   const [activeColorPicker, setActiveColorPicker] = useState<string | null>(null);
 
@@ -54,17 +67,17 @@ const GraphModal: React.FC<GraphModalProps> = ({ isOpen, onClose, selectedData, 
     return defaultColors[index % defaultColors.length];
   }
 
-  // Initialize colors when selectedData changes
+  // Update colors when selectedData changes
   useEffect(() => {
-    const initialColors: ColorState = {};
+    const newColors: ColorState = {};
     selectedData.forEach((_, index) => {
-      initialColors[`vehicle-${index}`] = {
+      newColors[`vehicle-${index}`] = {
         total: getDefaultColor(index * 3),
         in: getDefaultColor(index * 3 + 1),
         out: getDefaultColor(index * 3 + 2)
       };
     });
-    setColors(initialColors);
+    setColors(newColors);
   }, [selectedData]);
 
   const handleColorChange = (color: { hex: string }, vehicleIndex: number, constraint: 'total' | 'in' | 'out') => {
@@ -632,11 +645,10 @@ const GraphModal: React.FC<GraphModalProps> = ({ isOpen, onClose, selectedData, 
       document.body.removeChild(container);
 
       if (svg) {
-        // Add the SVG wrapper with exact dimensions and styles
         const wrappedSvg = `
           <div style="
-            width: 400px; 
-            height: 300px; 
+            width: 100%; 
+            height: 100%; 
             display: flex; 
             align-items: center; 
             justify-content: center;
@@ -645,11 +657,117 @@ const GraphModal: React.FC<GraphModalProps> = ({ isOpen, onClose, selectedData, 
             ${svg}
           </div>
         `;
+        
+        const newWidget = {
+          type: 'graph' as const,
+          title: graphTitle,
+          content: wrappedSvg,
+          backgroundColor: selectedColor
+        };
+
+        console.log('Adding widget:', newWidget); // Debug log
+        addWidget(newWidget);
         addGraph(graphTitle, wrappedSvg);
+        
         onClose();
         onGraphCreated?.();
       }
     }
+  };
+
+  const pastelColors = [
+    { name: 'White', value: '#ffffff' },
+    { name: 'Pastel Blue', value: '#E3F2FD' },
+    { name: 'Pastel Purple', value: '#F3E5F5' },
+    { name: 'Pastel Green', value: '#E8F5E9' },
+    { name: 'Pastel Yellow', value: '#FFFDE7' },
+    { name: 'Pastel Pink', value: '#FCE4EC' },
+    { name: 'Pastel Orange', value: '#FFF3E0' }
+  ];
+
+  const handleCreateKPI = () => {
+    console.log('Creating KPI...'); // Debug log
+
+    const kpiContent = `
+      <div style="
+        width: 100%;
+        height: 100%;
+        padding: 1rem;
+        background-color: ${selectedColor};
+        overflow-y: auto;
+      ">
+        ${selectedData.map(vehicle => `
+          <div style="
+            margin-bottom: 1rem;
+            padding: 1rem;
+            background: ${selectedColor === '#ffffff' ? '#f9fafb' : '#ffffff'};
+            border-radius: 0.5rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+          ">
+            <h4 style="
+              margin: 0 0 0.5rem 0;
+              color: #374151;
+              font-size: 1.1rem;
+              font-weight: 600;
+            ">${vehicle.vehicleType}</h4>
+            
+            <div style="text-align: center; margin-bottom: 1rem;">
+              <span style="
+                display: block;
+                font-size: 2rem;
+                font-weight: 600;
+                color: #111827;
+              ">${vehicle.count}</span>
+              <span style="font-size: 0.875rem; color: #6b7280;">Total Vehicles</span>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+              <div style="
+                text-align: center;
+                padding: 0.75rem;
+                border-radius: 0.375rem;
+                background: ${selectedColor === '#ffffff' ? '#ffffff' : '#f9fafb'};
+              ">
+                <span style="
+                  display: block;
+                  font-size: 1.25rem;
+                  font-weight: 600;
+                  color: #059669;
+                ">${vehicle.in}</span>
+                <span style="font-size: 0.75rem; color: #6b7280;">In</span>
+              </div>
+              
+              <div style="
+                text-align: center;
+                padding: 0.75rem;
+                border-radius: 0.375rem;
+                background: ${selectedColor === '#ffffff' ? '#ffffff' : '#f9fafb'};
+              ">
+                <span style="
+                  display: block;
+                  font-size: 1.25rem;
+                  font-weight: 600;
+                  color: #dc2626;
+                ">${vehicle.out}</span>
+                <span style="font-size: 0.75rem; color: #6b7280;">Out</span>
+              </div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+
+    const newWidget = {
+      type: 'kpi' as const,
+      title: graphTitle || 'Vehicle Statistics',
+      content: kpiContent,
+      backgroundColor: selectedColor
+    };
+
+    console.log('Adding widget:', newWidget); // Debug log
+    addWidget(newWidget);
+    onClose();
+    onGraphCreated?.();
   };
 
   if (!isOpen) return null;
@@ -658,7 +776,7 @@ const GraphModal: React.FC<GraphModalProps> = ({ isOpen, onClose, selectedData, 
     <div className="graph-modal-overlay">
       <div className="graph-modal">
         <div className="graph-modal-header">
-          <h2>Generate Graph</h2>
+          <h2>Create Widget</h2>
           <button className="close-button" onClick={onClose}>&times;</button>
         </div>
         
@@ -667,9 +785,24 @@ const GraphModal: React.FC<GraphModalProps> = ({ isOpen, onClose, selectedData, 
             type="text"
             value={graphTitle}
             onChange={(e) => setGraphTitle(e.target.value)}
-            placeholder="Enter graph title"
+            placeholder="Enter widget title"
             className="graph-title-input"
           />
+
+          <div className="color-selection-section">
+            <h3>Background Color</h3>
+            <div className="color-options">
+              {pastelColors.map((color) => (
+                <button
+                  key={color.value}
+                  className={`color-button ${selectedColor === color.value ? 'selected' : ''}`}
+                  style={{ backgroundColor: color.value }}
+                  onClick={() => setSelectedColor(color.value)}
+                  title={color.name}
+                />
+              ))}
+            </div>
+          </div>
           
           <div className="graph-options">
             {graphOptions.map(({ type, label, icon, description }) => (
@@ -786,14 +919,25 @@ const GraphModal: React.FC<GraphModalProps> = ({ isOpen, onClose, selectedData, 
         </div>
 
         <div className="graph-modal-footer">
-          <button className="cancel-button" onClick={onClose}>Cancel</button>
-          <button 
-            className="generate-button"
-            onClick={handleCreateGraph}
-            disabled={!chartOptions || !graphTitle.trim()}
-          >
-            Generate Graph
+          <button className="cancel-button" onClick={onClose}>
+            Cancel
           </button>
+          <div className="action-buttons">
+            <button 
+              className="create-button"
+              onClick={handleCreateKPI}
+              disabled={!graphTitle.trim()}
+            >
+              Create KPI
+            </button>
+            <button 
+              className="create-button"
+              onClick={handleCreateGraph}
+              disabled={!chartOptions || !graphTitle.trim()}
+            >
+              Create Graph
+            </button>
+          </div>
         </div>
       </div>
     </div>

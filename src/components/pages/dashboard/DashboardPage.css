@@ -1,39 +1,102 @@
 /* Base container styles */
 .dashboard-container {
-  padding: 0.5rem;
+  padding: 2rem;
 }
 
 .dashboard-container h1 {
   margin-bottom: 2rem;
   color: #111827;
+  font-size: 1.875rem;
+}
+
+.widgets-display {
+  margin-top: 2rem;
+}
+
+.widgets-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 2rem;
+  padding: 1rem;
+}
+
+.widget-item {
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease;
+  min-height: 300px;
+  display: flex;
+  flex-direction: column;
+}
+
+.widget-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.widget-item h3 {
+  margin: 0 0 1rem 0;
+  color: #111827;
+  font-size: 1.25rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.widget-content {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.widget-content > div {
+  width: 100%;
+  height: 100%;
+}
+
+.no-widgets-message {
+  text-align: center;
+  padding: 3rem;
+  background: white;
+  border-radius: 0.75rem;
+  color: #6b7280;
+  border: 2px dashed #e5e7eb;
+}
+
+@media (max-width: 768px) {
+  .dashboard-container {
+    padding: 1rem;
+  }
+
+  .widgets-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .widget-item {
+    min-height: 250px;
+  }
 }
 
 /* Grid Layout styles */
 .layout {
   margin: 0;
-  min-height: calc(100% - 4rem);
+  min-height: calc(100vh - 200px);
 }
 
 .grid-item {
   position: relative;
   background: white;
-  border-radius: 0.5rem;
+  border-radius: 8px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  border: 1px solid #e5e7eb;
-  transition: box-shadow 0.2s, border-color 0.2s;
-  resize: both;
-  overflow: auto;
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* IE and Edge */
-}
-
-.grid-item::-webkit-scrollbar {
-  display: none; /* Chrome, Safari, Opera */
+  transition: box-shadow 0.2s;
+  overflow: hidden;
 }
 
 .grid-item:hover {
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  border-color: #6B4DE6;
 }
 
 .grid-item.dragging {
@@ -228,16 +291,34 @@
 .react-grid-item.react-grid-placeholder {
   background: #6B4DE6;
   opacity: 0.2;
-  border-radius: 0.5rem;
+  border-radius: 8px;
   transition-duration: 100ms;
 }
 
-/* Add solid background for widgets */
-.react-grid-item {
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  overflow: hidden;
+.react-resizable-handle {
+  background-image: none !important;
+  border-right: 2px solid #6B4DE6;
+  border-bottom: 2px solid #6B4DE6;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.grid-item:hover .react-resizable-handle {
+  opacity: 0.5;
+}
+
+/* Ensure content scales properly */
+.widget-content {
+  height: 100%;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.widget-content > div {
+  width: 100%;
+  height: 100%;
 }
 
 /* Adjust grid spacing */

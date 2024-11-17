@@ -10,8 +10,8 @@ import { GraphProvider } from './context/GraphContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import AdminSettings from './components/pages/settings/AdminSettings';
 import UserSettings from './components/pages/settings/UserSettings';
+import { WidgetProvider } from './context/WidgetContext';
 
-// Protected Route wrapper component
 const ProtectedRoute: React.FC<{ 
   children: React.ReactNode;
   allowedRole?: 'admin' | 'user';
@@ -30,19 +30,15 @@ const ProtectedRoute: React.FC<{
   return <>{children}</>;
 };
 
-const AppRoutes: React.FC = () => {
+const AppContent: React.FC = () => {
   return (
     <Routes>
-      {/* Public routes */}
       <Route path="/" element={<Navigate to="/login" replace />} />
       <Route path="/login" element={<LoginPage />} />
       
-      {/* Admin routes */}
       <Route path="/localconfig" element={
         <ProtectedRoute allowedRole="admin">
-          <GraphProvider>
-            <MainLayout />
-          </GraphProvider>
+          <MainLayout />
         </ProtectedRoute>
       }>
         <Route path="dashboard" element={<DashboardPage />} />
@@ -51,19 +47,15 @@ const AppRoutes: React.FC = () => {
         <Route path="graph" element={<LocalConfigPage />} />
       </Route>
 
-      {/* User routes */}
       <Route path="/localhost" element={
         <ProtectedRoute allowedRole="user">
-          <GraphProvider>
-            <MainLayout />
-          </GraphProvider>
+          <MainLayout />
         </ProtectedRoute>
       }>
         <Route path="dashboard" element={<UserHomePage />} />
         <Route path="settings" element={<UserSettings />} />
       </Route>
 
-      {/* Catch all route */}
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
   );
@@ -73,7 +65,11 @@ const App: React.FC = () => {
   return (
     <Router>
       <AuthProvider>
-        <AppRoutes />
+        <WidgetProvider>
+          <GraphProvider>
+            <AppContent />
+          </GraphProvider>
+        </WidgetProvider>
       </AuthProvider>
     </Router>
   );

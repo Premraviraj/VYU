@@ -13,23 +13,24 @@
 
 .data-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 300px));
-  gap: 3.5rem;
+  grid-template-columns: repeat(2, minmax(400px, 1fr));
+  gap: 4rem;
   margin: 0;
   width: 100%;
-  padding: 3rem;
+  padding: 4rem;
+  justify-content: center;
 }
 
 .data-card {
   background: white;
   border: 2px solid #e5e7eb;
   border-radius: 0.75rem;
-  padding: 1.5rem;
+  padding: 2.5rem;
   cursor: pointer;
   transition: all 0.2s ease;
   width: 100%;
-  min-width: unset;
-  max-width: 300px;
+  min-width: 400px;
+  max-width: 500px;
   margin: 0 auto;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
@@ -72,7 +73,7 @@
 
 .stat-item {
   text-align: center;
-  padding: 0.75rem;
+  padding: 1rem;
   background: #f9fafb;
   border-radius: 0.5rem;
 }
@@ -87,7 +88,7 @@
 
 .stat-value {
   display: block;
-  font-size: 1.25rem;
+  font-size: 1.5rem;
   font-weight: 600;
   color: #111827;
 }
@@ -98,29 +99,42 @@
 }
 
 .widgets-section {
-  margin-top: 2rem;
+  margin-top: 4rem;
+  padding: 2rem 4rem;
+}
+
+.widgets-section h2 {
+  font-size: 1.8rem;
+  margin-bottom: 2rem;
+  color: #111827;
 }
 
 .widgets-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  gap: 1.5rem;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 4rem;
+  padding: 2rem 0;
 }
 
 .widget-card {
   background: white;
-  border-radius: 0.75rem;
-  padding: 1.5rem;
+  border-radius: 1rem;
+  padding: 3rem 2rem;
   border: 2px solid #e5e7eb;
   cursor: pointer;
   transition: all 0.2s ease;
   text-align: center;
+  min-height: 300px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
 
 .widget-card:not(.disabled):hover {
   border-color: #6B4DE6;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 6px rgba(107, 77, 230, 0.1);
+  transform: translateY(-4px);
+  box-shadow: 0 8px 16px rgba(107, 77, 230, 0.15);
 }
 
 .widget-card.disabled {
@@ -132,43 +146,55 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  margin-bottom: 1rem;
+  margin-bottom: 2rem;
+  width: 100px;
+  height: 100px;
+  background: #f9fafb;
+  border-radius: 50%;
+  transition: all 0.2s ease;
 }
 
 .widget-icon .icon {
-  width: 48px;
-  height: 48px;
+  width: 60px;
+  height: 60px;
   color: #6B4DE6;
-  transition: transform 0.2s ease;
+  transition: all 0.2s ease;
+}
+
+.widget-card:not(.disabled):hover .widget-icon {
+  background: #6B4DE6;
 }
 
 .widget-card:not(.disabled):hover .icon {
+  color: white;
   transform: scale(1.1);
 }
 
 .widget-card h3 {
   color: #111827;
-  font-size: 1.125rem;
-  margin-bottom: 0.5rem;
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
 }
 
 .widget-card p {
   color: #6b7280;
-  font-size: 0.875rem;
+  font-size: 1.1rem;
   margin: 0;
+  max-width: 80%;
+  line-height: 1.5;
 }
 
 .time-details {
-  margin-top: 1rem;
-  padding-top: 1rem;
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
   border-top: 1px solid #e5e7eb;
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 1rem;
+  gap: 1.5rem;
 }
 
 .time-period {
-  padding: 0.75rem;
+  padding: 1rem;
   background: #f9fafb;
   border-radius: 0.5rem;
 }
@@ -221,18 +247,61 @@
 }
 
 /* Responsive adjustments */
-@media (max-width: 768px) {
+@media (max-width: 1200px) {
   .data-grid {
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 2.5rem;
+    grid-template-columns: 1fr;
+    gap: 3rem;
+    padding: 3rem;
+  }
+
+  .data-card {
+    min-width: 350px;
+    max-width: 450px;
+  }
+
+  .widgets-section {
     padding: 2rem;
+  }
+  
+  .widgets-grid {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+
+  .widget-card {
+    max-width: 500px;
+    margin: 0 auto;
+    padding: 2.5rem 2rem;
   }
 }
 
-@media (min-width: 1200px) {
+@media (max-width: 768px) {
   .data-grid {
-    grid-template-columns: repeat(auto-fit, minmax(280px, 300px));
-    gap: 3.5rem;
-    padding: 3rem;
+    padding: 2rem;
+  }
+
+  .data-card {
+    min-width: 300px;
+    padding: 2rem;
+  }
+
+  .widgets-section {
+    padding: 1.5rem;
+  }
+
+  .widget-card {
+    padding: 2rem 1.5rem;
+    min-height: 250px;
+  }
+
+  .widget-icon {
+    width: 80px;
+    height: 80px;
+    margin-bottom: 1.5rem;
+  }
+
+  .widget-icon .icon {
+    width: 48px;
+    height: 48px;
   }
 } 

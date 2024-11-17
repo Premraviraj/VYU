@@ -31,50 +31,61 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   }, [isAuthenticated, userRole]);
 
-  // Check and redirect based on auth state
+  // Simplified navigation logic
   useEffect(() => {
     const path = window.location.pathname;
-    const lastPath = localStorage.getItem('lastPath');
+
+    if (!isAuthenticated && path !== '/login') {
+      navigate('/login');
+      return;
+    }
 
     if (isAuthenticated && userRole) {
-      if (path === '/login') {
-        // If on login page, redirect to last path or default path based on role
-        const defaultPath = userRole === 'admin' ? '/localconfig/dashboard' : '/localhost';
-        navigate(lastPath || defaultPath);
-      } else if (path === '/') {
-        // If on root, redirect to appropriate dashboard
-        navigate(userRole === 'admin' ? '/localconfig/dashboard' : '/localhost');
-      } else if (userRole === 'user' && path.includes('/localconfig')) {
-        // If user tries to access admin routes
-        navigate('/localhost');
-      } else if (userRole === 'admin' && path === '/localhost') {
-        // If admin tries to access user routes
-        navigate('/localconfig/dashboard');
-      } else {
-        // Store current valid path
-        localStorage.setItem('lastPath', path);
+      // Only redirect if on login or root path
+      if (path === '/login' || path === '/') {
+        const defaultPath = userRole === 'admin' ? '/localconfig/dashboard' : '/localhost/dashboard';
+        navigate(defaultPath);
+        return;
       }
-    } else if (!isAuthenticated && path !== '/login') {
-      navigate('/login');
+
+      // Check for incorrect role access
+      const isAdminPath = path.includes('/localconfig');
+      const isUserPath = path.includes('/localhost');
+
+      if (userRole === 'admin' && isUserPath) {
+        navigate('/localconfig/dashboard');
+      } else if (userRole === 'user' && isAdminPath) {
+        navigate('/localhost/dashboard');
+      }
+      // If path is correct for role, don't navigate
     }
   }, [isAuthenticated, userRole, navigate]);
 
   const login = (role: 'admin' | 'user', redirectPath?: string) => {
     setIsAuthenticated(true);
     setUserRole(role);
-    const defaultPath = role === 'admin' ? '/localconfig/dashboard' : '/localhost';
-    const path = redirectPath || defaultPath;
-    localStorage.setItem('lastPath', path);
-    navigate(path);
+    const defaultPath = role === 'admin' ? '/localconfig/dashboard' : '/localhost/dashboard';
+    navigate(redirectPath || defaultPath);
   };
 
   const logout = () => {
     setIsAuthenticated(false);
     setUserRole(null);
-    // Clear localStorage
-    localStorage.removeItem('isAuthenticated');
-    localStorage.removeItem('userRole');
-    localStorage.removeItem('lastPath');
+    
+    // Clear auth-related items but keep preferences
+    const preferencesToKeep = {
+      theme: localStorage.getItem('theme'),
+      layout: localStorage.getItem('layout'),
+      dashboardWidgets: localStorage.getItem('dashboardWidgets')
+    };
+    
+    localStorage.clear();
+    
+    // Restore preferences
+    Object.entries(preferencesToKeep).forEach(([key, value]) => {
+      if (value) localStorage.setItem(key, value);
+    });
+    
     navigate('/login', { replace: true });
   };
 
