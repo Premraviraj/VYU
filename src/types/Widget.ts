@@ -21,5 +21,5 @@ export interface Widget {
   title: string;
   content: string;
   backgroundColor?: string;
-  chartOptions?: ChartOptions;
+  chartOptions?: Highcharts.Options;
 } 
