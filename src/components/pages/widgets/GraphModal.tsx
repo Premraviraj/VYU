@@ -1,15 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { VehicleStats } from '../../../data/vehicleData';
-import Highcharts from 'highcharts';
-import HighchartsMore from 'highcharts/highcharts-more';
-import HighchartsReact from 'highcharts-react-official';
 import { useGraphs } from '../../../context/GraphContext';
+import { useWidgets } from '../../../context/WidgetContext';
 import './GraphModal.css';
 import { ChromePicker } from 'react-color';
-import { useWidgets } from '../../../context/WidgetContext';
-
-// Initialize Highcharts modules
-HighchartsMore(Highcharts);
+import {
+  ScatterChart, Scatter, ComposedChart, XAxis, YAxis, CartesianGrid, 
+  Tooltip, Legend, Bar, Line, Cell,
+  LineChart, BarChart, PieChart, Pie, RadialBarChart, RadialBar
+} from 'recharts';
 
 interface GraphModalProps {
   isOpen: boolean;
@@ -18,7 +17,7 @@ interface GraphModalProps {
   onGraphCreated?: () => void;
 }
 
-type GraphType = 'line' | 'bar' | 'pie' | 'area' | 'spline' | 'butterfly' | 'nightingale' | 'waterfall' | 'radar';
+type GraphType = 'scatter' | 'composed' | 'horizontalBar' | 'jointLineScatter' | 'simpleLine' | 'verticalBar' | 'pie' | 'radialBar';
 
 interface ColorState {
   [key: string]: {
@@ -29,12 +28,12 @@ interface ColorState {
 }
 
 const GraphModal: React.FC<GraphModalProps> = ({ isOpen, onClose, selectedData, onGraphCreated }) => {
-  const [selectedGraphType, setSelectedGraphType] = useState<GraphType>('line');
-  const [chartOptions, setChartOptions] = useState<Highcharts.Options | null>(null);
+  const [selectedGraphType, setSelectedGraphType] = useState<GraphType>('scatter');
   const { addGraph } = useGraphs();
   const { addWidget } = useWidgets();
   const [graphTitle, setGraphTitle] = useState('');
   const [selectedColor, setSelectedColor] = useState('#ffffff');
+  const previewRef = useRef<HTMLDivElement>(null);
   
   // Initialize colors with default values
   const [colors, setColors] = useState<ColorState>(() => {
@@ -88,27 +87,22 @@ const GraphModal: React.FC<GraphModalProps> = ({ isOpen, onClose, selectedData, 
         [constraint]: color.hex
       }
     }));
-
-    if (chartOptions) {
-      const updatedOptions = generateChartOptions(selectedGraphType);
-      setChartOptions(updatedOptions);
-    }
   };
 
   const graphOptions = [
     { 
-      type: 'line',
-      label: 'Line Graph',
+      type: 'scatter',
+      label: 'Scatter Plot',
       icon: (
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="graph-icon">
-          <path d="M3 12h4l3-9 4 18 3-9h4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M3 3v18h18M7 14l3-6 4 8 3-4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
         </svg>
       ),
       description: 'Show trends over time'
     },
     { 
-      type: 'bar',
-      label: 'Bar Chart',
+      type: 'composed',
+      label: 'Composed Chart',
       icon: (
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="graph-icon">
           <path d="M4 20h16M4 20V4m0 16l4-4v4m4 0V10m0 10l4-8v8m4 0V6l-4 14" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -117,8 +111,8 @@ const GraphModal: React.FC<GraphModalProps> = ({ isOpen, onClose, selectedData, 
       description: 'Compare values across categories'
     },
     { 
-      type: 'pie',
-      label: 'Pie Chart',
+      type: 'horizontalBar',
+      label: 'Horizontal Bar Chart',
       icon: (
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="graph-icon">
           <path d="M12 2v10l8.5 5M12 2a10 10 0 1 0 8.5 15L12 12" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -127,8 +121,8 @@ const GraphModal: React.FC<GraphModalProps> = ({ isOpen, onClose, selectedData, 
       description: 'Show proportions of a whole'
     },
     { 
-      type: 'area',
-      label: 'Area Chart',
+      type: 'jointLineScatter',
+      label: 'Joint Line Scatter',
       icon: (
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="graph-icon">
           <path d="M3 12h4l3-9 4 18 3-9h4M3 20h18" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -138,526 +132,318 @@ const GraphModal: React.FC<GraphModalProps> = ({ isOpen, onClose, selectedData, 
       description: 'Visualize cumulative totals'
     },
     { 
-      type: 'spline',
-      label: 'Spline Chart',
+      type: 'simpleLine',
+      label: 'Simple Line',
       icon: (
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="graph-icon">
-          <path d="M3 12c4-6 8 6 12 0s4-6 6-6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M3 3v18h18M7 14l3-6 4 8 3-4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
         </svg>
       ),
-      description: 'Smooth curved line chart'
+      description: 'Basic line chart'
     },
     { 
-      type: 'butterfly',
-      label: 'Butterfly Chart',
+      type: 'verticalBar',
+      label: 'Vertical Bar',
       icon: (
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="graph-icon">
-          <path d="M12 3v18M3 12h18M7 8h10M7 16h10" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-          <path d="M7 8L3 12l4 4M17 8l4 4-4 4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M4 20h16M4 20V4m0 16l4-4v4m4 0V10m0 10l4-8v8m4 0V6l-4 14" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
         </svg>
       ),
-      description: 'Compare positive/negative values'
+      description: 'Vertical bar comparison'
     },
     { 
-      type: 'nightingale',
-      label: 'Nightingale',
+      type: 'pie',
+      label: 'Pie Chart',
+      icon: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="graph-icon">
+          <path d="M12 2v10l8.5 5M12 2a10 10 0 1 0 8.5 15L12 12" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      ),
+      description: 'Show proportions'
+    },
+    { 
+      type: 'radialBar',
+      label: 'Radial Bar',
       icon: (
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="graph-icon">
           <circle cx="12" cy="12" r="10" strokeWidth="2"/>
-          <path d="M12 2l4 10-4 10-4-10z" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-          <path d="M2 12h20M12 2v20" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M12 2a10 10 0 0 1 10 10" strokeWidth="2" strokeLinecap="round"/>
         </svg>
       ),
-      description: 'Polar area diagram'
-    },
-    { 
-      type: 'waterfall',
-      label: 'Waterfall',
-      icon: (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="graph-icon">
-          <path d="M3 3v18h18M7 16v-4m4 4V8m4 8v-6m4 6v-3" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-          <path d="M7 12h4m4 0h4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" strokeDasharray="2 2"/>
-        </svg>
-      ),
-      description: 'Show running total'
-    },
-    { 
-      type: 'radar',
-      label: 'Radar Chart',
-      icon: (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="graph-icon">
-          <path d="M12 2l8.5 5v10L12 22l-8.5-5V7L12 2z" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-          <path d="M12 2v20M3.5 7l17 10M3.5 17l17-10" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-        </svg>
-      ),
-      description: 'Compare multiple variables'
+      description: 'Circular progress bars'
     },
   ] as const;
 
-  const generateChartOptions = (type: GraphType): Highcharts.Options => {
+  const generateChartComponent = (type: GraphType) => {
     const timePoints = ['morning', 'afternoon', 'evening', 'night'];
-    
-    // Convert color objects to array of strings
-    const getSeriesColors = () => {
-      return Object.values(colors).map(colorSet => [
-        colorSet.total,
-        colorSet.in,
-        colorSet.out
-      ]).flat();
-    };
+    const formattedData = timePoints.map(time => ({
+      name: time,
+      ...selectedData.reduce((acc, vehicle) => ({
+        ...acc,
+        [vehicle.vehicleType]: vehicle.details[time].in,
+        [`${vehicle.vehicleType}Out`]: vehicle.details[time].out
+      }), {})
+    }));
 
-    const colorSettings = {
-      colors: getSeriesColors(),
-      plotOptions: {
-        series: {
-          colorByPoint: false as const,
-          animation: false as const
-        } as Highcharts.PlotSeriesOptions
-      }
-    };
-
-    const getColor = (index: number, type: 'total' | 'in' | 'out'): string => {
-      const vehicleKey = `vehicle-${Math.floor(index / 3)}`;
-      return colors[vehicleKey]?.[type] || getDefaultColor(index);
+    const containerStyle = {
+      width: '100%',
+      height: '300px',
+      maxWidth: '600px',
+      margin: '0 auto'
     };
 
     switch (type) {
-      case 'line':
-        return {
-          chart: {
-            type: 'line',
-            backgroundColor: 'transparent'
-          },
-          title: {
-            text: 'Time Distribution'
-          },
-          xAxis: {
-            categories: timePoints
-          },
-          yAxis: {
-            title: {
-              text: 'Count'
-            }
-          },
-          plotOptions: colorSettings.plotOptions,
-          series: selectedData.map((vehicle, index) => ({
-            name: vehicle.vehicleType,
-            type: 'line' as const,
-            color: getColor(index, 'total'),
-            data: [
-              vehicle.details.morning.in,
-              vehicle.details.afternoon.in,
-              vehicle.details.evening.in,
-              vehicle.details.night.in
-            ]
-          })) as any
-        };
+      case 'scatter':
+        return (
+          <div style={containerStyle}>
+            <ScatterChart width={500} height={300}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="name" />
+              <YAxis />
+              <Tooltip cursor={{ strokeDasharray: '3 3' }} />
+              <Legend />
+              {selectedData.map((vehicle, index) => (
+                <Scatter
+                  key={vehicle.vehicleType}
+                  name={vehicle.vehicleType}
+                  data={formattedData.map(d => ({
+                    x: d.name,
+                    y: d[vehicle.vehicleType],
+                    z: d[`${vehicle.vehicleType}Out`]
+                  }))}
+                  fill={colors[`vehicle-${index}`].total}
+                />
+              ))}
+            </ScatterChart>
+          </div>
+        );
+
+      case 'composed':
+        return (
+          <div style={containerStyle}>
+            <ComposedChart width={500} height={300} data={formattedData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="name" />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              {selectedData.map((vehicle, index) => (
+                <React.Fragment key={vehicle.vehicleType}>
+                  <Bar
+                    dataKey={vehicle.vehicleType}
+                    fill={colors[`vehicle-${index}`].total}
+                    opacity={0.8}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey={`${vehicle.vehicleType}Out`}
+                    stroke={colors[`vehicle-${index}`].out}
+                    strokeWidth={2}
+                    dot={{ fill: colors[`vehicle-${index}`].out }}
+                  />
+                </React.Fragment>
+              ))}
+            </ComposedChart>
+          </div>
+        );
+
+      case 'horizontalBar':
+        return (
+          <div style={containerStyle}>
+            <ComposedChart
+              layout="vertical"
+              width={500}
+              height={300}
+              data={formattedData}
+            >
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis type="number" />
+              <YAxis dataKey="name" type="category" />
+              <Tooltip />
+              <Legend />
+              {selectedData.map((vehicle, index) => (
+                <Bar
+                  key={vehicle.vehicleType}
+                  dataKey={vehicle.vehicleType}
+                  fill={colors[`vehicle-${index}`].total}
+                  barSize={20}
+                >
+                  {formattedData.map((entry, i) => (
+                    <Cell
+                      key={`cell-${i}`}
+                      fill={colors[`vehicle-${index}`].total}
+                      fillOpacity={0.8 - (i * 0.15)}
+                    />
+                  ))}
+                </Bar>
+              ))}
+            </ComposedChart>
+          </div>
+        );
+
+      case 'jointLineScatter':
+        return (
+          <div style={containerStyle}>
+            <ComposedChart width={500} height={300} data={formattedData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="name" />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              {selectedData.map((vehicle, index) => (
+                <React.Fragment key={vehicle.vehicleType}>
+                  <Line
+                    type="monotone"
+                    dataKey={vehicle.vehicleType}
+                    stroke={colors[`vehicle-${index}`].total}
+                    strokeWidth={2}
+                  />
+                  <Scatter
+                    dataKey={vehicle.vehicleType}
+                    fill={colors[`vehicle-${index}`].total}
+                    name={`${vehicle.vehicleType} Points`}
+                  />
+                </React.Fragment>
+              ))}
+            </ComposedChart>
+          </div>
+        );
+
+      case 'simpleLine':
+        return (
+          <div style={containerStyle}>
+            <LineChart width={500} height={300} data={formattedData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="name" />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              {selectedData.map((vehicle, index) => (
+                <Line
+                  key={vehicle.vehicleType}
+                  type="monotone"
+                  dataKey={vehicle.vehicleType}
+                  stroke={colors[`vehicle-${index}`].total}
+                  strokeWidth={2}
+                  dot={{ fill: colors[`vehicle-${index}`].total }}
+                />
+              ))}
+            </LineChart>
+          </div>
+        );
+
+      case 'verticalBar':
+        return (
+          <div style={containerStyle}>
+            <BarChart width={500} height={300} data={formattedData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="name" />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              {selectedData.map((vehicle, index) => (
+                <Bar
+                  key={vehicle.vehicleType}
+                  dataKey={vehicle.vehicleType}
+                  fill={colors[`vehicle-${index}`].total}
+                />
+              ))}
+            </BarChart>
+          </div>
+        );
 
       case 'pie':
-        return {
-          chart: {
-            type: 'pie',
-            backgroundColor: 'transparent'
-          },
-          title: {
-            text: 'Vehicle Distribution'
-          },
-          plotOptions: {
-            pie: {
-              colors: getSeriesColors()
-            }
-          },
-          series: [{
-            name: 'Total Count',
-            type: 'pie',
-            data: selectedData.map((d, index) => ({
-              name: d.vehicleType,
-              y: d.count,
-              color: getColor(index, 'total')
-            }))
-          }] as any
-        };
+        return (
+          <div style={containerStyle}>
+            <PieChart width={500} height={300}>
+              <Pie
+                data={selectedData}
+                dataKey="count"
+                nameKey="vehicleType"
+                cx="50%"
+                cy="50%"
+                outerRadius={100}
+                label
+              >
+                {selectedData.map((entry, index) => (
+                  <Cell 
+                    key={entry.vehicleType} 
+                    fill={colors[`vehicle-${index}`].total}
+                  />
+                ))}
+              </Pie>
+              <Tooltip />
+              <Legend />
+            </PieChart>
+          </div>
+        );
 
-      case 'waterfall':
-        return {
-          chart: {
-            type: 'waterfall',
-            backgroundColor: 'transparent'
-          },
-          title: {
-            text: 'Vehicle Flow Analysis'
-          },
-          xAxis: {
-            categories: ['Initial', ...timePoints, 'Total']
-          },
-          yAxis: {
-            title: {
-              text: 'Count'
-            }
-          },
-          plotOptions: {
-            waterfall: {
-              color: getColor(0, 'in'),
-              negativeColor: getColor(0, 'out'),
-              borderColor: '#374151'
-            }
-          },
-          series: [{
-            name: 'Flow',
-            type: 'waterfall',
-            data: selectedData.map(vehicle => [
-              { name: 'Initial', y: 0 },
-              { name: 'Morning', y: vehicle.details.morning.in - vehicle.details.morning.out },
-              { name: 'Afternoon', y: vehicle.details.afternoon.in - vehicle.details.afternoon.out },
-              { name: 'Evening', y: vehicle.details.evening.in - vehicle.details.evening.out },
-              { name: 'Night', y: vehicle.details.night.in - vehicle.details.night.out },
-              {
-                name: 'Total',
-                isSum: true,
-                color: getColor(0, 'total')
-              }
-            ])[0]
-          }] as any
-        };
-
-      case 'bar':
-        return {
-          chart: {
-            type: 'bar',
-            backgroundColor: 'transparent'
-          },
-          title: {
-            text: 'Vehicle Statistics'
-          },
-          xAxis: {
-            categories: selectedData.map(d => d.vehicleType)
-          },
-          yAxis: {
-            title: {
-              text: 'Count'
-            }
-          },
-          series: [{
-            name: 'Total Count',
-            type: 'bar',
-            data: selectedData.map(d => d.count),
-            color: colors[`vehicle-0`].total
-          }, {
-            name: 'Vehicles In',
-            type: 'bar',
-            data: selectedData.map(d => d.in),
-            color: colors[`vehicle-0`].in
-          }, {
-            name: 'Vehicles Out',
-            type: 'bar',
-            data: selectedData.map(d => d.out),
-            color: colors[`vehicle-0`].out
-          }] as any
-        };
-
-      case 'butterfly':
-        return {
-          chart: {
-            type: 'bar',
-            backgroundColor: 'transparent'
-          },
-          title: {
-            text: 'Vehicle In/Out Distribution'
-          },
-          xAxis: {
-            categories: selectedData.map(d => d.vehicleType)
-          },
-          yAxis: {
-            title: {
-              text: 'Count'
-            }
-          },
-          plotOptions: {
-            series: {
-              stacking: 'normal'
-            }
-          },
-          series: [{
-            name: 'Vehicles In',
-            type: 'bar',
-            data: selectedData.map(d => d.in),
-            color: colors[`vehicle-0`].in
-          }, {
-            name: 'Vehicles Out',
-            type: 'bar',
-            data: selectedData.map(d => -d.out),
-            color: colors[`vehicle-0`].out
-          }] as any
-        };
-
-      case 'nightingale':
-        return {
-          chart: {
-            polar: true,
-            backgroundColor: 'transparent'
-          },
-          title: {
-            text: 'Time Distribution (Nightingale)'
-          },
-          pane: {
-            startAngle: 0,
-            endAngle: 360
-          },
-          xAxis: {
-            categories: timePoints,
-            tickmarkPlacement: 'on',
-            lineWidth: 0
-          },
-          yAxis: {
-            min: 0
-          },
-          plotOptions: {
-            column: {
-              pointPadding: 0,
-              groupPadding: 0,
-              colorByPoint: false
-            }
-          },
-          series: selectedData.map((vehicle, index) => ({
-            name: vehicle.vehicleType,
-            type: 'column',
-            color: getColor(index, 'total'),
-            data: [
-              vehicle.details.morning.in,
-              vehicle.details.afternoon.in,
-              vehicle.details.evening.in,
-              vehicle.details.night.in
-            ]
-          }))
-        };
-
-      case 'area':
-        return {
-          chart: {
-            type: 'area',
-            backgroundColor: 'transparent'
-          },
-          title: {
-            text: 'Time Distribution'
-          },
-          xAxis: {
-            categories: timePoints
-          },
-          yAxis: {
-            title: {
-              text: 'Count'
-            }
-          },
-          plotOptions: {
-            ...colorSettings.plotOptions,
-            area: {
-              animation: false
-            }
-          },
-          series: selectedData.map((vehicle, index) => ({
-            name: vehicle.vehicleType,
-            type: 'area' as const,
-            color: getColor(index, 'total'),
-            data: [
-              vehicle.details.morning.in,
-              vehicle.details.afternoon.in,
-              vehicle.details.evening.in,
-              vehicle.details.night.in
-            ]
-          })) as any
-        };
-
-      case 'spline':
-        return {
-          chart: {
-            type: 'spline',
-            backgroundColor: 'transparent'
-          },
-          title: {
-            text: 'Time Trend'
-          },
-          xAxis: {
-            categories: timePoints
-          },
-          yAxis: {
-            title: {
-              text: 'Count'
-            }
-          },
-          plotOptions: {
-            ...colorSettings.plotOptions,
-            spline: {
-              animation: false
-            }
-          },
-          series: selectedData.map((vehicle, index) => ({
-            name: vehicle.vehicleType,
-            type: 'spline' as const,
-            color: getColor(index, 'total'),
-            data: [
-              vehicle.details.morning.in,
-              vehicle.details.afternoon.in,
-              vehicle.details.evening.in,
-              vehicle.details.night.in
-            ]
-          })) as any
-        };
-
-      case 'radar':
-        return {
-          chart: {
-            polar: true,
-            backgroundColor: 'transparent'
-          },
-          title: {
-            text: 'Vehicle Distribution Analysis'
-          },
-          pane: {
-            size: '80%'
-          },
-          xAxis: {
-            categories: timePoints,
-            tickmarkPlacement: 'on',
-            lineWidth: 0
-          },
-          yAxis: {
-            gridLineInterpolation: 'polygon',
-            lineWidth: 0,
-            min: 0
-          },
-          plotOptions: {
-            ...colorSettings.plotOptions,
-            series: {
-              ...colorSettings.plotOptions.series,
-              pointStart: 0
-            }
-          },
-          series: selectedData.map((vehicle, index) => ({
-            name: vehicle.vehicleType,
-            type: 'line' as const,
-            color: getColor(index, 'total'),
-            data: [
-              vehicle.details.morning.in,
-              vehicle.details.afternoon.in,
-              vehicle.details.evening.in,
-              vehicle.details.night.in
-            ]
-          })) as any
-        };
+      case 'radialBar':
+        return (
+          <div style={containerStyle}>
+            <RadialBarChart 
+              width={500} 
+              height={300} 
+              innerRadius="10%" 
+              outerRadius="80%" 
+              data={selectedData.map((vehicle, index) => ({
+                name: vehicle.vehicleType,
+                value: vehicle.count,
+                fill: colors[`vehicle-${index}`].total
+              }))}
+              startAngle={0}
+              endAngle={360}
+            >
+              <RadialBar
+                angleAxisId={0}
+                dataKey="value"
+                background
+                cornerRadius={10}
+                label={{
+                  position: 'insideStart',
+                  fill: '#666',
+                }}
+              />
+              <Legend 
+                iconSize={10}
+                width={120}
+                height={140}
+                layout="vertical"
+                verticalAlign="middle"
+                align="right"
+              />
+              <Tooltip />
+            </RadialBarChart>
+          </div>
+        );
 
       default:
-        return {
-          chart: {
-            type: 'line',
-            backgroundColor: 'transparent'
-          },
-          title: {
-            text: 'Time Distribution'
-          },
-          xAxis: {
-            categories: timePoints
-          },
-          yAxis: {
-            title: {
-              text: 'Count'
-            }
-          },
-          series: selectedData.map(vehicle => ({
-            name: vehicle.vehicleType,
-            type: 'line',
-            data: [
-              vehicle.details.morning.in,
-              vehicle.details.afternoon.in,
-              vehicle.details.evening.in,
-              vehicle.details.night.in
-            ]
-          }))
-        };
+        return null;
     }
   };
 
   const handleGraphTypeSelect = (type: GraphType) => {
     setSelectedGraphType(type);
-    const options = generateChartOptions(type);
-    setChartOptions(options);
   };
 
   const handleCreateGraph = () => {
-    if (chartOptions) {
-      // Create a container div with exact dimensions
-      const container = document.createElement('div');
-      container.style.width = '400px';
-      container.style.height = '300px';
-      document.body.appendChild(container);
-
-      // Create the chart with exact same options as preview
-      const chart = Highcharts.chart(container, {
-        ...chartOptions,
-        chart: {
-          ...chartOptions.chart,
-          width: 400,
-          height: 300,
-          animation: false,
-          style: {
-            fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
-          }
-        },
-        credits: {
-          enabled: false
-        },
-        title: {
-          ...chartOptions.title,
-          style: {
-            fontSize: '16px',
-            fontWeight: '500'
-          }
-        },
-        xAxis: {
-          ...chartOptions.xAxis,
-          labels: {
-            style: {
-              fontSize: '12px'
-            }
-          }
-        },
-        yAxis: {
-          ...chartOptions.yAxis,
-          labels: {
-            style: {
-              fontSize: '12px'
-            }
-          }
-        },
-        plotOptions: {
-          ...chartOptions.plotOptions,
-          series: {
-            ...chartOptions.plotOptions?.series,
-            animation: false
-          }
-        }
-      });
-
-      // Get the SVG
-      const svg = chart.container.querySelector('svg')?.outerHTML;
-      
-      // Clean up
-      chart.destroy();
-      document.body.removeChild(container);
-
-      if (svg) {
+    if (previewRef.current) {
+      const chartComponent = generateChartComponent(selectedGraphType);
+      if (chartComponent) {
         const wrappedSvg = `
           <div style="
-            width: 100%; 
-            height: 100%; 
-            display: flex; 
-            align-items: center; 
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
             justify-content: center;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: ${selectedColor};
+            padding: 1rem;
           ">
-            ${svg}
+            ${previewRef.current.innerHTML}
           </div>
         `;
-        
+
         const newWidget = {
           type: 'graph' as const,
           title: graphTitle,
@@ -665,10 +451,7 @@ const GraphModal: React.FC<GraphModalProps> = ({ isOpen, onClose, selectedData, 
           backgroundColor: selectedColor
         };
 
-        console.log('Adding widget:', newWidget); // Debug log
         addWidget(newWidget);
-        addGraph(graphTitle, wrappedSvg);
-        
         onClose();
         onGraphCreated?.();
       }
@@ -810,26 +593,12 @@ const GraphModal: React.FC<GraphModalProps> = ({ isOpen, onClose, selectedData, 
 
           <div className="graph-preview">
             <h3>Preview</h3>
-            {chartOptions ? (
-              <div style={{ width: '400px', height: '300px' }}>
-                <HighchartsReact
-                  highcharts={Highcharts}
-                  options={{
-                    ...chartOptions,
-                    chart: {
-                      ...chartOptions.chart,
-                      width: 400,
-                      height: 300
-                    },
-                    credits: {
-                      enabled: false
-                    }
-                  }}
-                />
-              </div>
-            ) : (
-              <div className="no-preview">Select a graph type to see preview</div>
-            )}
+            <div 
+              ref={previewRef}
+              style={{ width: '400px', height: '300px', margin: '0 auto' }}
+            >
+              {generateChartComponent(selectedGraphType)}
+            </div>
           </div>
         </div>
 
@@ -840,7 +609,7 @@ const GraphModal: React.FC<GraphModalProps> = ({ isOpen, onClose, selectedData, 
           <button 
             className="create-button"
             onClick={handleCreateGraph}
-            disabled={!chartOptions || !graphTitle.trim()}
+            disabled={!selectedGraphType || !graphTitle.trim()}
           >
             Create Graph
           </button>
