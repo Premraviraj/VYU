@@ -2,12 +2,14 @@ import React, { useState } from 'react';
 import { useGraphs } from '../../../context/GraphContext';
 import { VehicleStats, vehicleData } from '../../../data/vehicleData';
 import GraphModal from './GraphModal';
+import KPIModal from './KPIModal';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import './WidgetsPage.css';
 
 const WidgetsPage: React.FC = () => {
   const [isGraphModalOpen, setIsGraphModalOpen] = useState(false);
+  const [isKPIModalOpen, setIsKPIModalOpen] = useState(false);
   const [selectedData, setSelectedData] = useState<VehicleStats[]>([]);
   const { addKPICard } = useGraphs();
 
@@ -30,16 +32,7 @@ const WidgetsPage: React.FC = () => {
 
   const handleCreateKPI = () => {
     if (selectedData.length > 0) {
-      addKPICard(selectedData);
-      toast.success('KPI Card created successfully!', {
-        position: "top-right",
-        autoClose: 3000,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-      });
-      setSelectedData([]); // Reset selection after creating
+      setIsKPIModalOpen(true);
     }
   };
 
@@ -52,7 +45,19 @@ const WidgetsPage: React.FC = () => {
       pauseOnHover: true,
       draggable: true,
     });
-    setSelectedData([]); // Reset selection after creating
+    setSelectedData([]);
+  };
+
+  const handleKPICreated = () => {
+    toast.success('KPI Card created successfully!', {
+      position: "top-right",
+      autoClose: 3000,
+      hideProgressBar: false,
+      closeOnClick: true,
+      pauseOnHover: true,
+      draggable: true,
+    });
+    setSelectedData([]);
   };
 
   return (
@@ -160,6 +165,13 @@ const WidgetsPage: React.FC = () => {
         onClose={() => setIsGraphModalOpen(false)}
         selectedData={selectedData}
         onGraphCreated={handleGraphCreated}
+      />
+
+      <KPIModal
+        isOpen={isKPIModalOpen}
+        onClose={() => setIsKPIModalOpen(false)}
+        selectedData={selectedData}
+        onKPICreated={handleKPICreated}
       />
     </div>
   );

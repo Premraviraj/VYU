@@ -685,98 +685,13 @@ const GraphModal: React.FC<GraphModalProps> = ({ isOpen, onClose, selectedData, 
     { name: 'Pastel Orange', value: '#FFF3E0' }
   ];
 
-  const handleCreateKPI = () => {
-    console.log('Creating KPI...'); // Debug log
-
-    const kpiContent = `
-      <div style="
-        width: 100%;
-        height: 100%;
-        padding: 1rem;
-        background-color: ${selectedColor};
-        overflow-y: auto;
-      ">
-        ${selectedData.map(vehicle => `
-          <div style="
-            margin-bottom: 1rem;
-            padding: 1rem;
-            background: ${selectedColor === '#ffffff' ? '#f9fafb' : '#ffffff'};
-            border-radius: 0.5rem;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-          ">
-            <h4 style="
-              margin: 0 0 0.5rem 0;
-              color: #374151;
-              font-size: 1.1rem;
-              font-weight: 600;
-            ">${vehicle.vehicleType}</h4>
-            
-            <div style="text-align: center; margin-bottom: 1rem;">
-              <span style="
-                display: block;
-                font-size: 2rem;
-                font-weight: 600;
-                color: #111827;
-              ">${vehicle.count}</span>
-              <span style="font-size: 0.875rem; color: #6b7280;">Total Vehicles</span>
-            </div>
-            
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-              <div style="
-                text-align: center;
-                padding: 0.75rem;
-                border-radius: 0.375rem;
-                background: ${selectedColor === '#ffffff' ? '#ffffff' : '#f9fafb'};
-              ">
-                <span style="
-                  display: block;
-                  font-size: 1.25rem;
-                  font-weight: 600;
-                  color: #059669;
-                ">${vehicle.in}</span>
-                <span style="font-size: 0.75rem; color: #6b7280;">In</span>
-              </div>
-              
-              <div style="
-                text-align: center;
-                padding: 0.75rem;
-                border-radius: 0.375rem;
-                background: ${selectedColor === '#ffffff' ? '#ffffff' : '#f9fafb'};
-              ">
-                <span style="
-                  display: block;
-                  font-size: 1.25rem;
-                  font-weight: 600;
-                  color: #dc2626;
-                ">${vehicle.out}</span>
-                <span style="font-size: 0.75rem; color: #6b7280;">Out</span>
-              </div>
-            </div>
-          </div>
-        `).join('')}
-      </div>
-    `;
-
-    const newWidget = {
-      type: 'kpi' as const,
-      title: graphTitle || 'Vehicle Statistics',
-      content: kpiContent,
-      backgroundColor: selectedColor
-    };
-
-    console.log('Adding widget:', newWidget); // Debug log
-    addWidget(newWidget);
-    onClose();
-    onGraphCreated?.();
-  };
-
   if (!isOpen) return null;
 
   return (
     <div className="graph-modal-overlay">
       <div className="graph-modal">
         <div className="graph-modal-header">
-          <h2>Create Widget</h2>
+          <h2>Create Graph</h2>
           <button className="close-button" onClick={onClose}>&times;</button>
         </div>
         
@@ -922,22 +837,13 @@ const GraphModal: React.FC<GraphModalProps> = ({ isOpen, onClose, selectedData, 
           <button className="cancel-button" onClick={onClose}>
             Cancel
           </button>
-          <div className="action-buttons">
-            <button 
-              className="create-button"
-              onClick={handleCreateKPI}
-              disabled={!graphTitle.trim()}
-            >
-              Create KPI
-            </button>
-            <button 
-              className="create-button"
-              onClick={handleCreateGraph}
-              disabled={!chartOptions || !graphTitle.trim()}
-            >
-              Create Graph
-            </button>
-          </div>
+          <button 
+            className="create-button"
+            onClick={handleCreateGraph}
+            disabled={!chartOptions || !graphTitle.trim()}
+          >
+            Create Graph
+          </button>
         </div>
       </div>
     </div>
