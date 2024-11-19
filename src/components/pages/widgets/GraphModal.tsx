@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { VehicleStats } from '../../../data/vehicleData';
-import { useGraphs } from '../../../context/GraphContext';
+import { useGraphs, Graph, ColorState } from '../../../context/GraphContext';
 import { useWidgets } from '../../../context/WidgetContext';
 import './GraphModal.css';
 import { ChromePicker } from 'react-color';
@@ -21,13 +21,29 @@ interface GraphModalProps {
 
 type GraphType = 'scatter' | 'composed' | 'horizontalBar' | 'jointLineScatter' | 'simpleLine' | 'verticalBar' | 'pie' | 'radialBar';
 
-interface ColorState {
-  [key: string]: {
-    total: string;
-    in: string;
-    out: string;
-  };
+interface FormattedData {
+  label: string;
+  Entry: number;
+  Exit: number;
+  Total: number;
+  value: number;
 }
+
+const formatVehicleData = (vehicle: VehicleStats): FormattedData => {
+  const ruleCounts = vehicle.filteredStats?.RuleCounts || {
+    Entry: 0,
+    Exit: 0,
+    Total: 0
+  };
+
+  return {
+    label: vehicle.vehicleType,
+    Entry: ruleCounts.Entry || 0,
+    Exit: ruleCounts.Exit || 0,
+    Total: vehicle.count || 0,
+    value: ruleCounts.Entry || 0 // For pie chart
+  };
+};
 
 const GraphModal: React.FC<GraphModalProps> = ({ isOpen, onClose, selectedData, onGraphCreated }) => {
   const [selectedGraphType, setSelectedGraphType] = useState<GraphType>('scatter');
@@ -177,15 +193,10 @@ const GraphModal: React.FC<GraphModalProps> = ({ isOpen, onClose, selectedData, 
   ] as const;
 
   const generateChartComponent = (type: GraphType) => {
-    const timePoints = ['morning', 'afternoon', 'evening', 'night'];
-    const formattedData = timePoints.map(time => ({
-      name: time,
-      ...selectedData.reduce((acc, vehicle) => ({
-        ...acc,
-        [vehicle.vehicleType]: vehicle.details[time].in,
-        [`${vehicle.vehicleType}Out`]: vehicle.details[time].out
-      }), {})
-    }));
+    // Transform data using the formatting function
+    const formattedData: FormattedData[] = selectedData.map(formatVehicleData);
+
+    console.log('Formatted Chart Data:', formattedData);
 
     const containerStyle = {
       width: '100%',
@@ -200,7 +211,7 @@ const GraphModal: React.FC<GraphModalProps> = ({ isOpen, onClose, selectedData, 
           <div style={containerStyle}>
             <ScatterChart width={500} height={300}>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
+              <XAxis dataKey="label" />
               <YAxis />
               <Tooltip cursor={{ strokeDasharray: '3 3' }} />
               <Legend />
@@ -209,9 +220,9 @@ const GraphModal: React.FC<GraphModalProps> = ({ isOpen, onClose, selectedData, 
                   key={vehicle.vehicleType}
                   name={vehicle.vehicleType}
                   data={formattedData.map(d => ({
-                    x: d.name,
-                    y: d[vehicle.vehicleType],
-                    z: d[`${vehicle.vehicleType}Out`]
+                    x: d.label,
+                    y: d.Entry,
+                    z: d.Exit
                   }))}
                   fill={colors[`vehicle-${index}`].total}
                 />
@@ -238,7 +249,7 @@ const GraphModal: React.FC<GraphModalProps> = ({ isOpen, onClose, selectedData, 
                   />
                   <Line
                     type="monotone"
-                    dataKey={`${vehicle.vehicleType}Out`}
+                    dataKey={`Exit`}
                     stroke={colors[`vehicle-${index}`].out}
                     strokeWidth={2}
                     dot={{ fill: colors[`vehicle-${index}`].out }}
@@ -432,30 +443,26 @@ const GraphModal: React.FC<GraphModalProps> = ({ isOpen, onClose, selectedData, 
     if (previewRef.current) {
       const chartComponent = generateChartComponent(selectedGraphType);
       if (chartComponent) {
-        const wrappedSvg = `
-          <div style="
-            width: 100%;
-            height: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background-color: ${selectedColor};
-            padding: 1rem;
-          ">
-            ${previewRef.current.innerHTML}
-          </div>
-        `;
+        const graphId = `graph-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        
+        // Transform the data using the formatting function
+        const formattedData = selectedData.map(formatVehicleData);
 
-        const newWidget = {
-          type: 'graph' as const,
-          title: graphTitle,
-          content: wrappedSvg,
-          backgroundColor: selectedColor
+        const newGraph: Graph = {
+          id: graphId,
+          type: 'graph',
+          title: graphTitle || 'Vehicle Statistics',
+          data: {
+            type: selectedGraphType,
+            selectedData: formattedData
+          },
+          backgroundColor: selectedColor,
+          colors: colors
         };
 
-        addWidget(newWidget);
-        onClose();
+        addGraph(graphId, newGraph);
         onGraphCreated?.();
+        onClose();
       }
     }
   };

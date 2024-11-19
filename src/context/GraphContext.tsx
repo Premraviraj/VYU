@@ -13,16 +13,33 @@ interface KPICard {
   type: string;
 }
 
-interface Graph {
+export interface ColorState {
+  [key: string]: {
+    total: string;
+    in: string;
+    out: string;
+  };
+}
+
+export interface Graph {
+  id: string;
+  type: string;
   title: string;
-  svg: string;
+  data: {
+    type: string;
+    selectedData?: { label: string; Entry: number; Exit: number; Total: number; }[];
+    timeOfDay?: string;
+    rules?: string;
+  };
+  backgroundColor: string;
+  colors?: ColorState;
 }
 
 interface GraphContextType {
   generatedGraphs: Graph[];
   kpiCards: KPICard[];
-  addGraph: (title: string, svg: string) => void;
-  removeGraph: (index: number) => void;
+  addGraph: (id: string, graph: Graph) => void;
+  removeGraph: (id: string) => void;
   addKPICard: (data: VehicleStats[]) => void;
   removeKPICard: (id: string) => void;
   dashboardLayout: any[];
@@ -77,12 +94,21 @@ export const GraphProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     localStorage.setItem('userDashboardLayout', JSON.stringify(userDashboardLayout));
   }, [userDashboardLayout]);
 
-  const addGraph = (title: string, svg: string) => {
-    setGeneratedGraphs(prev => [...prev, { title, svg }]);
+  const addGraph = (id: string, graph: Graph) => {
+    setGeneratedGraphs(prev => {
+      // Check if a graph with this id already exists
+      const exists = prev.some(g => g.id === id);
+      if (exists) {
+        // Update existing graph
+        return prev.map(g => g.id === id ? graph : g);
+      }
+      // Add new graph
+      return [...prev, graph];
+    });
   };
 
-  const removeGraph = (index: number) => {
-    setGeneratedGraphs(prev => prev.filter((_, i) => i !== index));
+  const removeGraph = (id: string) => {
+    setGeneratedGraphs(prev => prev.filter(graph => graph.id !== id));
   };
 
   const addKPICard = (selectedData: VehicleStats[]) => {
