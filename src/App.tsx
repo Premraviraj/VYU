@@ -11,6 +11,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import AdminSettings from './components/pages/settings/AdminSettings';
 import UserSettings from './components/pages/settings/UserSettings';
 import { WidgetProvider } from './context/WidgetContext';
+import { ThemeProvider } from './context/ThemeContext';
 
 const ProtectedRoute: React.FC<{ 
   children: React.ReactNode;
@@ -75,15 +76,17 @@ const AppContent: React.FC = () => {
 
 const App: React.FC = () => {
   return (
-    <Router>
-      <AuthProvider>
-        <WidgetProvider>
-          <GraphProvider>
-            <AppContent />
-          </GraphProvider>
-        </WidgetProvider>
-      </AuthProvider>
-    </Router>
+    <ThemeProvider>
+      <Router>
+        <AuthProvider>
+          <WidgetProvider>
+            <GraphProvider>
+              <AppContent />
+            </GraphProvider>
+          </WidgetProvider>
+        </AuthProvider>
+      </Router>
+    </ThemeProvider>
   );
 };
 

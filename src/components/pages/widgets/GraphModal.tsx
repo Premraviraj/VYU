@@ -9,6 +9,7 @@ import {
   Tooltip, Legend, Bar, Line, Cell,
   LineChart, BarChart, PieChart, Pie, RadialBarChart, RadialBar
 } from 'recharts';
+import ColorLensIcon from '@mui/icons-material/ColorLens';
 
 interface GraphModalProps {
   isOpen: boolean;
@@ -458,15 +459,51 @@ const GraphModal: React.FC<GraphModalProps> = ({ isOpen, onClose, selectedData, 
     }
   };
 
-  const pastelColors = [
-    { name: 'White', value: '#ffffff' },
-    { name: 'Pastel Blue', value: '#E3F2FD' },
-    { name: 'Pastel Purple', value: '#F3E5F5' },
-    { name: 'Pastel Green', value: '#E8F5E9' },
-    { name: 'Pastel Yellow', value: '#FFFDE7' },
-    { name: 'Pastel Pink', value: '#FCE4EC' },
-    { name: 'Pastel Orange', value: '#FFF3E0' }
+  const colorCards = [
+    { 
+      id: 1, 
+      mainColor: '#FFB5B5', // Pastel Red
+      shades: ['#FFD1D1', '#FFE3E3', '#FFF0F0', '#FFF5F5']
+    },
+    { 
+      id: 2, 
+      mainColor: '#B5E8FF', // Pastel Blue
+      shades: ['#D1F0FF', '#E3F6FF', '#F0FAFF', '#F5FCFF']
+    },
+    { 
+      id: 3, 
+      mainColor: '#B5FFD9', // Pastel Green
+      shades: ['#D1FFE7', '#E3FFF0', '#F0FFF6', '#F5FFF9']
+    },
+    { 
+      id: 4, 
+      mainColor: '#FFE5B5', // Pastel Orange
+      shades: ['#FFEED1', '#FFF4E3', '#FFF8F0', '#FFFBF5']
+    },
+    { 
+      id: 5, 
+      mainColor: '#E0B5FF', // Pastel Purple
+      shades: ['#EBD1FF', '#F2E3FF', '#F7F0FF', '#FBF5FF']
+    }
   ];
+
+  const handleColorSelect = (color: string) => {
+    setSelectedColor(color);
+    
+    // Add active class to trigger rotation animation
+    const wheel = document.querySelector('.color-wheel');
+    const centerCircle = document.querySelector('.center-circle');
+    
+    if (wheel && centerCircle) {
+      wheel.classList.add('active');
+      centerCircle.classList.add('active');
+      
+      setTimeout(() => {
+        wheel.classList.remove('active');
+        centerCircle.classList.remove('active');
+      }, 1000);
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -489,15 +526,24 @@ const GraphModal: React.FC<GraphModalProps> = ({ isOpen, onClose, selectedData, 
 
           <div className="color-selection-section">
             <h3>Background Color</h3>
-            <div className="color-options">
-              {pastelColors.map((color) => (
-                <button
-                  key={color.value}
-                  className={`color-button ${selectedColor === color.value ? 'selected' : ''}`}
-                  style={{ backgroundColor: color.value }}
-                  onClick={() => setSelectedColor(color.value)}
-                  title={color.name}
-                />
+            <div className="color-cards">
+              {colorCards.map(card => (
+                <div 
+                  key={card.id}
+                  className={`color-card ${selectedColor === card.mainColor ? 'selected' : ''}`}
+                  onClick={() => setSelectedColor(card.mainColor)}
+                >
+                  <div className="color-main" style={{ backgroundColor: card.mainColor }} />
+                  <div className="color-shades">
+                    {card.shades.map((shade, index) => (
+                      <div 
+                        key={index}
+                        className="color-shade"
+                        style={{ backgroundColor: shade }}
+                      />
+                    ))}
+                  </div>
+                </div>
               ))}
             </div>
           </div>

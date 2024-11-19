@@ -1,36 +1,28 @@
 import React, { useState, useEffect } from 'react';
-import { useGraphs } from '../../../context/GraphContext';
-import { VehicleStats } from '../../../data/vehicleData';
+
 import GraphModal from './GraphModal';
 import KPIModal from './KPIModal';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import './WidgetsPage.css';
 import { API_URL } from '../../../utils/config';
-import DirectionsCarIcon from '@mui/icons-material/DirectionsCar';
-import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
-import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
-import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import WbSunnyIcon from '@mui/icons-material/WbSunny';
 import WbTwilightIcon from '@mui/icons-material/WbTwilight';
 import NightsStayIcon from '@mui/icons-material/NightsStay';
 import StarIcon from '@mui/icons-material/Star';
+import SettingsIcon from '@mui/icons-material/Settings';
+import StorageIcon from '@mui/icons-material/Storage';
+import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import LayersOutlinedIcon from '@mui/icons-material/LayersOutlined';
 
 const WidgetsPage: React.FC = () => {
   const [isGraphModalOpen, setIsGraphModalOpen] = useState(false);
   const [isKPIModalOpen, setIsKPIModalOpen] = useState(false);
-  const [selectedData, setSelectedData] = useState<VehicleStats[]>([]);
-  const [vehicleData, setVehicleData] = useState<VehicleStats[]>([]);
+  const [selectedData, setSelectedData] = useState<any[]>([]);
+  const [collectionsData, setCollectionsData] = useState<{[key: string]: any}>({});
+  const [expandedCollection, setExpandedCollection] = useState<string | 'all'>('all');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  const isValidReactNode = (value: unknown): value is React.ReactNode => {
-    return typeof value === 'string' 
-      || typeof value === 'number' 
-      || typeof value === 'boolean'
-      || value === null
-      || value === undefined;
-  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -51,41 +43,12 @@ const WidgetsPage: React.FC = () => {
 
         const data = await response.json();
         console.log('Raw API Response:', data);
-        
-        const transformedData = Object.entries(data).map(([key, value]: [string, any]) => ({
-          vehicleType: key,
-          count: typeof value.count === 'number' ? value.count : 0,
-          in: typeof value.in === 'number' ? value.in : 0,
-          out: typeof value.out === 'number' ? value.out : 0,
-          details: {
-            morning: {
-              in: value?.morning?.in || value?.details?.morning?.in || 0,
-              out: value?.morning?.out || value?.details?.morning?.out || 0
-            },
-            afternoon: {
-              in: value?.afternoon?.in || value?.details?.afternoon?.in || 0,
-              out: value?.afternoon?.out || value?.details?.afternoon?.out || 0
-            },
-            evening: {
-              in: value?.evening?.in || value?.details?.evening?.in || 0,
-              out: value?.evening?.out || value?.details?.evening?.out || 0
-            },
-            night: {
-              in: value?.night?.in || value?.details?.night?.in || 0,
-              out: value?.night?.out || value?.details?.night?.out || 0
-            }
-          },
-          lastUpdated: value.lastUpdated || new Date().toISOString(),
-          rawData: value
-        }));
-
-        console.log('Transformed Data:', transformedData);
-        setVehicleData(transformedData);
+        setCollectionsData(data);
         setError(null);
       } catch (err) {
         console.error('Fetch Error:', err);
         setError(err instanceof Error ? err.message : 'Failed to fetch data');
-        toast.error('Failed to load vehicle data');
+        toast.error('Failed to load collections data');
       } finally {
         setIsLoading(false);
       }
@@ -94,15 +57,20 @@ const WidgetsPage: React.FC = () => {
     fetchData();
   }, []);
 
-  const handleDataSelection = (vehicle: VehicleStats) => {
+  const handleDataSelection = (collectionName: string) => {
     setSelectedData(prev => {
-      const isSelected = prev.some(v => v.vehicleType === vehicle.vehicleType);
+      const isSelected = prev.some(item => item.name === collectionName);
       if (isSelected) {
-        return prev.filter(v => v.vehicleType !== vehicle.vehicleType);
+        return prev.filter(item => item.name !== collectionName);
       } else {
-        return [...prev, vehicle];
+        return [...prev, { name: collectionName }];
       }
     });
+  };
+
+  const handleCardClick = (collectionName: string) => {
+    console.log('Expanding collection:', collectionName);
+    setExpandedCollection(expandedCollection === collectionName ? 'all' : collectionName);
   };
 
   const handleCreateGraph = () => {
@@ -142,7 +110,11 @@ const WidgetsPage: React.FC = () => {
   };
 
   const renderValue = (value: unknown): React.ReactNode => {
-    if (isValidReactNode(value)) {
+    if (typeof value === 'string' 
+      || typeof value === 'number' 
+      || typeof value === 'boolean'
+      || value === null
+      || value === undefined) {
       return value;
     }
     if (typeof value === 'object' && value !== null) {
@@ -173,6 +145,45 @@ const WidgetsPage: React.FC = () => {
     }
   };
 
+  const getIconForKey = (key: string) => {
+    switch(key.toLowerCase()) {
+      case 'status':
+        return <SettingsIcon className="detail-icon status" />;
+      case 'lastupdate':
+      case 'lastupdated':
+      case 'timestamp':
+        return <AccessTimeIcon className="detail-icon time" />;
+      case 'storage':
+      case 'data':
+        return <StorageIcon className="detail-icon storage" />;
+      default:
+        return <LayersOutlinedIcon className="detail-icon default" />;
+    }
+  };
+
+  const formatValue = (value: any): string => {
+    if (value instanceof Date) {
+      return new Date(value).toLocaleString();
+    }
+    if (typeof value === 'boolean') {
+      return value ? 'Active' : 'Inactive';
+    }
+    return String(value);
+  };
+
+  const getCollectionNumber = (collectionName: string): string => {
+    const number = collectionName.replace(/[^0-9]/g, '');
+    return number;
+  };
+
+  const sortCollections = (collections: string[]): string[] => {
+    return collections.sort((a, b) => {
+      const numA = parseInt(getCollectionNumber(a));
+      const numB = parseInt(getCollectionNumber(b));
+      return numA - numB;
+    });
+  };
+
   return (
     <div className="widgets-page">
       <ToastContainer />
@@ -188,67 +199,66 @@ const WidgetsPage: React.FC = () => {
             <button onClick={() => window.location.reload()}>Retry</button>
           </div>
         ) : (
-          <div className="data-grid">
-            {vehicleData.map((vehicle, index) => (
+          <div className="collections-grid">
+            {sortCollections(Object.keys(collectionsData)).map((collectionName) => (
               <div
-                key={`${vehicle.vehicleType}-${index}`}
-                className={`data-card ${selectedData.some(v => v.vehicleType === vehicle.vehicleType) ? 'selected' : ''}`}
-                onClick={() => handleDataSelection(vehicle)}
+                key={collectionName}
+                className={`collection-card ${
+                  selectedData.some(item => item.name === collectionName) ? 'selected' : ''
+                } ${expandedCollection === 'all' || expandedCollection === collectionName ? 'expanded' : ''}`}
               >
-                <div className="data-header">
-                  <h3>{vehicle.vehicleType}</h3>
-                  <span className="last-updated">Updated: {vehicle.lastUpdated}</span>
+                <div 
+                  className="collection-header"
+                  onClick={() => handleCardClick(collectionName)}
+                >
+                  <div className="header-content">
+                    <LayersOutlinedIcon className="collection-icon" />
+                    <div className="collection-info">
+                      <h3>Collection {getCollectionNumber(collectionName)}</h3>
+                    </div>
+                  </div>
                 </div>
                 
-                <div className="data-content">
-                  {Object.entries(vehicle.rawData).map(([key, value]) => {
-                    if (['vehicleType', 'lastUpdated', 'rawData'].includes(key)) return null;
-                    
-                    if (typeof value === 'object' && value !== null) {
-                      return (
-                        <div key={key} className="nested-data">
-                          <h4>
-                            <CalendarTodayIcon className="section-icon" />
-                            {key}
-                          </h4>
-                          <div className="nested-values">
-                            {Object.entries(value).map(([subKey, subValue]) => {
-                              const timeValue = renderTimeValue(subValue);
-                              return (
-                                <div key={`${key}-${subKey}`} className="data-item">
-                                  {getTimeIcon(subKey)}
-                                  <span className="data-label">{subKey}</span>
-                                  <div className="data-values">
-                                    <div className="value-item">
-                                      <ArrowUpwardIcon className="direction-icon in" />
-                                      <span>{renderValue(timeValue.in)}</span>
+                <div className="collection-status" onClick={() => handleDataSelection(collectionName)}>
+                  <div className="status-indicator active"></div>
+                  <span>Active Collections</span>
+                </div>
+
+                {(expandedCollection === 'all' || expandedCollection === collectionName) && (
+                  <div className="collection-details">
+                    <div className="details-grid">
+                      {Object.entries(collectionsData[collectionName] || {}).map(([key, value]) => (
+                        <div key={key} className="detail-card">
+                          <div className="detail-header">
+                            {getIconForKey(key)}
+                            <h4>{key}</h4>
+                          </div>
+                          <div className="detail-content">
+                            {typeof value === 'object' && value !== null ? (
+                              <div className="nested-data">
+                                {Object.entries(value).map(([subKey, subValue]) => (
+                                  <div key={subKey} className="nested-item">
+                                    <div className="nested-item-header">
+                                      {getIconForKey(subKey)}
+                                      <span className="nested-label">{subKey}</span>
                                     </div>
-                                    <div className="value-item">
-                                      <ArrowDownwardIcon className="direction-icon out" />
-                                      <span>{renderValue(timeValue.out)}</span>
-                                    </div>
+                                    <span className="nested-value">
+                                      {formatValue(subValue)}
+                                    </span>
                                   </div>
-                                </div>
-                              );
-                            })}
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="detail-value-container">
+                                <span className="detail-value">{formatValue(value)}</span>
+                              </div>
+                            )}
                           </div>
                         </div>
-                      );
-                    }
-                    
-                    return (
-                      <div key={key} className="data-item">
-                        <div className="data-item-header">
-                          {key === 'count' && <DirectionsCarIcon className="stat-icon" />}
-                          {key === 'in' && <ArrowUpwardIcon className="stat-icon in" />}
-                          {key === 'out' && <ArrowDownwardIcon className="stat-icon out" />}
-                          <span className="data-label">{key}</span>
-                        </div>
-                        <span className="data-value">{renderValue(value)}</span>
-                      </div>
-                    );
-                  })}
-                </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
           </div>
