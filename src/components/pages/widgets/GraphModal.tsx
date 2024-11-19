@@ -10,6 +10,7 @@ import {
   LineChart, BarChart, PieChart, Pie, RadialBarChart, RadialBar
 } from 'recharts';
 import ColorLensIcon from '@mui/icons-material/ColorLens';
+import StackLoader from '../../common/StackLoader';
 
 interface GraphModalProps {
   isOpen: boolean;

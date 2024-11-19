@@ -20,26 +20,39 @@
 }
 
 .dashboard-container h1 {
-  font-size: 2.5rem;
-  font-weight: 700;
-  color: #1e293b;
-  margin-bottom: 2rem;
-  background: linear-gradient(135deg, #1e293b, #334155);
+  font-size: 2.8rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, #1e293b, #4f46e5);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
+  margin-bottom: 2rem;
   position: relative;
-  display: inline-block;
+  letter-spacing: -1px;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+  padding-left: 2rem;
+  animation: slideInTitle 0.8s ease-out;
 }
 
 .dashboard-container h1::after {
   content: '';
   position: absolute;
-  bottom: -8px;
-  left: 0;
-  width: 60%;
+  bottom: -10px;
+  left: 2rem;
+  width: 80px;
   height: 4px;
-  background: linear-gradient(90deg, #6B4DE6, transparent);
+  background: linear-gradient(90deg, #4f46e5, transparent);
   border-radius: 2px;
+}
+
+@keyframes slideInTitle {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 .widgets-display {
@@ -115,30 +128,358 @@
 
 .no-widgets-message {
   text-align: center;
-  padding: 3rem;
-  background: linear-gradient(135deg,
-    rgba(255, 255, 255, 0.9),
-    rgba(255, 255, 255, 0.8));
-  border-radius: 20px;
+  padding: 4rem 2rem;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: 24px;
   color: #64748b;
-  border: 2px dashed rgba(107, 77, 230, 0.2);
+  border: 2px dashed rgba(107, 77, 230, 0.3);
   position: relative;
   overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  transform-style: preserve-3d;
+  perspective: 1000px;
 }
 
+/* Dynamic Background Animation */
 .no-widgets-message::before {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(135deg,
-    rgba(107, 77, 230, 0.05),
-    rgba(107, 77, 230, 0.02));
+  background: 
+    linear-gradient(45deg, 
+      rgba(79, 70, 229, 0.1) 0%,
+      rgba(147, 51, 234, 0.1) 25%,
+      rgba(79, 70, 229, 0.1) 50%,
+      rgba(147, 51, 234, 0.1) 75%,
+      rgba(79, 70, 229, 0.1) 100%);
+  background-size: 400% 400%;
+  animation: gradientFlow 15s linear infinite;
   opacity: 0;
-  transition: opacity 0.3s ease;
+  transition: opacity 0.5s ease;
 }
 
 .no-widgets-message:hover::before {
   opacity: 1;
+}
+
+/* Floating Elements Animation */
+.no-widgets-content {
+  position: relative;
+  z-index: 2;
+  transform-style: preserve-3d;
+  transition: transform 0.5s ease;
+}
+
+.no-widgets-message:hover .no-widgets-content {
+  transform: translateZ(50px);
+}
+
+/* Dynamic Icon Animation */
+.no-widgets-icon {
+  font-size: 4rem;
+  margin-bottom: 1.5rem;
+  color: #4f46e5;
+  position: relative;
+  animation: floatIcon 3s ease-in-out infinite;
+}
+
+.no-widgets-icon::after {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle, rgba(79, 70, 229, 0.2) 0%, transparent 70%);
+  filter: blur(10px);
+  animation: glowPulse 2s ease-in-out infinite;
+}
+
+/* Interactive Title */
+.no-widgets-title {
+  font-size: 2.5rem;
+  font-weight: 800;
+  margin-bottom: 1.5rem;
+  background: linear-gradient(135deg, #1e293b 0%, #4f46e5 50%, #7c3aed 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmerText 3s linear infinite;
+}
+
+/* Dynamic Description */
+.no-widgets-description {
+  font-size: 1.2rem;
+  color: #64748b;
+  max-width: 600px;
+  margin: 0 auto 2rem;
+  line-height: 1.6;
+  transform: translateZ(30px);
+  opacity: 0.9;
+  transition: all 0.3s ease;
+}
+
+.no-widgets-message:hover .no-widgets-description {
+  opacity: 1;
+  transform: translateZ(40px);
+}
+
+/* Interactive Button */
+.create-widget-button {
+  padding: 1rem 2.5rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: white;
+  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  transform-style: preserve-3d;
+  transform: translateZ(20px);
+}
+
+.create-widget-button::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    45deg,
+    transparent,
+    rgba(255, 255, 255, 0.3),
+    transparent
+  );
+  transform: rotate(45deg);
+  animation: buttonShine 3s ease-in-out infinite;
+}
+
+/* Floating Particles */
+.particles-container {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.particle {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  background: #4f46e5;
+  border-radius: 50%;
+  animation: particleFloat 4s infinite;
+}
+
+/* Particle positions and delays */
+.particle:nth-child(1) { left: 10%; animation-delay: 0.3s; }
+.particle:nth-child(2) { left: 20%; animation-delay: 0.6s; }
+.particle:nth-child(3) { left: 30%; animation-delay: 0.9s; }
+.particle:nth-child(4) { left: 40%; animation-delay: 1.2s; }
+.particle:nth-child(5) { left: 50%; animation-delay: 1.5s; }
+.particle:nth-child(6) { left: 60%; animation-delay: 1.8s; }
+.particle:nth-child(7) { left: 70%; animation-delay: 2.1s; }
+.particle:nth-child(8) { left: 80%; animation-delay: 2.4s; }
+.particle:nth-child(9) { left: 90%; animation-delay: 2.7s; }
+.particle:nth-child(10) { left: 100%; animation-delay: 3s; }
+
+/* Animations */
+@keyframes gradientFlow {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 400% 50%; }
+}
+
+@keyframes floatIcon {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-20px) scale(1.1); }
+}
+
+@keyframes glowPulse {
+  0%, 100% { opacity: 0.5; transform: scale(1); }
+  50% { opacity: 0.8; transform: scale(1.2); }
+}
+
+@keyframes shimmerText {
+  0% { background-position: 200% center; }
+  100% { background-position: -200% center; }
+}
+
+@keyframes buttonShine {
+  0% { transform: rotate(45deg) translateX(-200%); }
+  100% { transform: rotate(45deg) translateX(200%); }
+}
+
+@keyframes particleFloat {
+  0% {
+    transform: translateY(100%) scale(0);
+    opacity: 0;
+  }
+  50% {
+    opacity: 0.8;
+    transform: translateY(-50%) scale(1);
+  }
+  100% {
+    transform: translateY(-200%) scale(0);
+    opacity: 0;
+  }
+}
+
+/* Interactive Hover Effects */
+.create-widget-button:hover {
+  transform: translateZ(30px) scale(1.05);
+  box-shadow: 
+    0 20px 40px rgba(79, 70, 229, 0.3),
+    0 0 0 2px rgba(255, 255, 255, 0.1);
+}
+
+.no-widgets-message:hover {
+  transform: scale(1.02);
+  box-shadow: 
+    0 30px 60px rgba(79, 70, 229, 0.2),
+    0 0 0 2px rgba(79, 70, 229, 0.3);
+}
+
+/* Mouse Movement Effect */
+.no-widgets-message {
+  --mouse-x: 50%;
+  --mouse-y: 50%;
+}
+
+.no-widgets-message::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    circle at var(--mouse-x) var(--mouse-y),
+    rgba(79, 70, 229, 0.15),
+    transparent 50%
+  );
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.no-widgets-message:hover::after {
+  opacity: 1;
+}
+
+/* Add this JavaScript to track mouse movement */
+/* 
+document.querySelector('.no-widgets-message')?.addEventListener('mousemove', (e) => {
+  const rect = e.currentTarget.getBoundingClientRect();
+  const x = ((e.clientX - rect.left) / rect.width) * 100;
+  const y = ((e.clientY - rect.top) / rect.height) * 100;
+  e.currentTarget.style.setProperty('--mouse-x', `${x}%`);
+  e.currentTarget.style.setProperty('--mouse-y', `${y}%`);
+});
+*/
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .no-widgets-message {
+    padding: 3rem 1.5rem;
+  }
+
+  .no-widgets-title {
+    font-size: 2rem;
+  }
+
+  .no-widgets-description {
+    font-size: 1rem;
+  }
+
+  .create-widget-button {
+    padding: 0.875rem 2rem;
+    font-size: 1rem;
+  }
+}
+
+/* Add support for reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .no-widgets-message,
+  .no-widgets-content,
+  .no-widgets-icon,
+  .create-widget-button,
+  .particle {
+    animation: none;
+    transition: none;
+  }
+}
+
+/* Particle Animation */
+.particles {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.particle {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  background: #4f46e5;
+  border-radius: 50%;
+  animation: particleFloat 4s infinite;
+  opacity: 0;
+}
+
+.particle:nth-child(1) { left: 10%; animation-delay: 0s; }
+.particle:nth-child(2) { left: 30%; animation-delay: 0.5s; }
+.particle:nth-child(3) { left: 50%; animation-delay: 1s; }
+.particle:nth-child(4) { left: 70%; animation-delay: 1.5s; }
+.particle:nth-child(5) { left: 90%; animation-delay: 2s; }
+
+@keyframes particleFloat {
+  0% {
+    transform: translateY(100%) scale(0);
+    opacity: 0;
+  }
+  50% {
+    opacity: 0.5;
+  }
+  100% {
+    transform: translateY(-100%) scale(1);
+    opacity: 0;
+  }
+}
+
+/* Mouse tracking effect */
+.no-widgets-message {
+  --mouse-x: 50%;
+  --mouse-y: 50%;
+}
+
+.no-widgets-message::before {
+  background: radial-gradient(
+    circle at var(--mouse-x) var(--mouse-y),
+    rgba(79, 70, 229, 0.15),
+    transparent 50%
+  );
+}
+
+/* Add interactive elements */
+.widget-suggestions {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  margin-top: 2rem;
+}
+
+.widget-suggestion {
+  padding: 1rem;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(79, 70, 229, 0.2);
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.widget-suggestion:hover {
+  transform: translateY(-5px);
+  background: rgba(79, 70, 229, 0.1);
+  border-color: rgba(79, 70, 229, 0.5);
 }
 
 .grid-item {

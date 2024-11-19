@@ -14,6 +14,7 @@ import SettingsIcon from '@mui/icons-material/Settings';
 import StorageIcon from '@mui/icons-material/Storage';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import LayersOutlinedIcon from '@mui/icons-material/LayersOutlined';
+import StackLoader from '../../common/StackLoader';
 
 const WidgetsPage: React.FC = () => {
   const [isGraphModalOpen, setIsGraphModalOpen] = useState(false);
@@ -23,6 +24,8 @@ const WidgetsPage: React.FC = () => {
   const [expandedCollection, setExpandedCollection] = useState<string | 'all'>('all');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [collectionDetails, setCollectionDetails] = useState<{ [key: string]: any }>({});
+  const [loadingDetails, setLoadingDetails] = useState<{ [key: string]: boolean }>({});
 
   useEffect(() => {
     const fetchData = async () => {
@@ -109,6 +112,48 @@ const WidgetsPage: React.FC = () => {
     setSelectedData([]);
   };
 
+  const handleDetailCardClick = async (collectionName: string) => {
+    try {
+      setLoadingDetails(prev => ({ ...prev, [collectionName]: true }));
+      
+      // Extract the actual collection name from the key
+      const actualCollectionName = collectionName.toLowerCase().replace(/\s+/g, '');
+      
+      // Create query parameters with the actual collection name
+      const queryParams = new URLSearchParams({
+        collectionName: actualCollectionName  // This will be 'cam1', 'cam2', 'peoples', etc.
+      }).toString();
+      
+      console.log(`Fetching data for collection: ${actualCollectionName}`);
+      
+      const response = await fetch(`${API_URL}/api/v1/Collection/data?${queryParams}`, {
+        method: 'GET',
+        headers: {
+          'Accept': '*/*',
+        },
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch data for ${collectionName}`);
+      }
+
+      const data = await response.json();
+      console.log(`Response for ${collectionName}:`, data);
+
+      setCollectionDetails(prev => ({
+        ...prev,
+        [collectionName]: data,
+      }));
+    } catch (err) {
+      console.error('Fetch Error:', err);
+      toast.error(`Failed to load data for ${collectionName}`);
+    } finally {
+      setLoadingDetails(prev => ({ ...prev, [collectionName]: false }));
+    }
+  };
+  
+
   const renderValue = (value: unknown): React.ReactNode => {
     if (typeof value === 'string' 
       || typeof value === 'number' 
@@ -192,7 +237,10 @@ const WidgetsPage: React.FC = () => {
       <div className="data-selection-section">
         <h2>Select Data</h2>
         {isLoading ? (
-          <div className="loading-spinner">Loading...</div>
+          <div className="loading-container">
+            <StackLoader size="large" />
+            <span className="loading-text">Loading Collections...</span>
+          </div>
         ) : error ? (
           <div className="error-message">
             {error}
@@ -228,25 +276,29 @@ const WidgetsPage: React.FC = () => {
                   <div className="collection-details">
                     <div className="details-grid">
                       {Object.entries(collectionsData[collectionName] || {}).map(([key, value]) => (
-                        <div key={key} className="detail-card">
+                        <div 
+                          key={key} 
+                          className="detail-card"
+                          onClick={() => handleDetailCardClick(key)}
+                        >
                           <div className="detail-header">
                             {getIconForKey(key)}
                             <h4>{key}</h4>
                           </div>
                           <div className="detail-content">
-                            {typeof value === 'object' && value !== null ? (
-                              <div className="nested-data">
-                                {Object.entries(value).map(([subKey, subValue]) => (
-                                  <div key={subKey} className="nested-item">
-                                    <div className="nested-item-header">
-                                      {getIconForKey(subKey)}
-                                      <span className="nested-label">{subKey}</span>
-                                    </div>
-                                    <span className="nested-value">
-                                      {formatValue(subValue)}
-                                    </span>
-                                  </div>
-                                ))}
+                            {loadingDetails[collectionName] ? (
+                              <div className="loading-container">
+                                <StackLoader size="small" />
+                                <span className="loading-text">Loading Details...</span>
+                              </div>
+                            ) : collectionDetails[key] ? (
+                              <div className="detail-value-container">
+                                <span className="detail-value">
+                                  {typeof collectionDetails[key] === 'object' 
+                                    ? JSON.stringify(collectionDetails[key], null, 2)
+                                    : collectionDetails[key]}
+                                </span>
+                                <span className="detail-label">{key}</span>
                               </div>
                             ) : (
                               <div className="detail-value-container">
