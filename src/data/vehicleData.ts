@@ -18,8 +18,8 @@ export interface VehicleStats {
   count: number;
   in: number;
   out: number;
-  details: DailyDetails;
   lastUpdated: string;
+  filteredStats?: FilteredStats;
   rawData: Record<string, any>;
 }
 
@@ -45,6 +45,19 @@ interface APIVehicleData {
   last_updated: string;
 }
 
+// Add new interfaces for filtered data
+export interface RuleCounts {
+  Entry: number;
+  Exit: number;
+  Total: number;
+  [key: string]: number;
+}
+
+export interface FilteredStats {
+  VideoSource: string;
+  RuleCounts: RuleCounts;
+}
+
 // Function to transform API data to match our interface
 const transformAPIData = (apiData: APIVehicleData): VehicleStats => {
   return {
@@ -52,24 +65,6 @@ const transformAPIData = (apiData: APIVehicleData): VehicleStats => {
     count: apiData.total_count,
     in: apiData.total_in,
     out: apiData.total_out,
-    details: {
-      morning: {
-        in: apiData.time_details.morning.vehicles_in,
-        out: apiData.time_details.morning.vehicles_out
-      },
-      afternoon: {
-        in: apiData.time_details.afternoon.vehicles_in,
-        out: apiData.time_details.afternoon.vehicles_out
-      },
-      evening: {
-        in: apiData.time_details.evening.vehicles_in,
-        out: apiData.time_details.evening.vehicles_out
-      },
-      night: {
-        in: apiData.time_details.night.vehicles_in,
-        out: apiData.time_details.night.vehicles_out
-      }
-    },
     lastUpdated: apiData.last_updated,
     rawData: apiData
   };
@@ -85,43 +80,22 @@ export const fetchVehicleData = async (): Promise<VehicleStats[]> => {
         'Accept': 'application/json',
       },
       credentials: 'include',
-      mode: 'cors',
     });
     
     if (!response.ok) {
       throw new Error('Failed to fetch vehicle data');
     }
 
-    const apiData = await response.json();
-    const dataArray = Array.isArray(apiData) ? apiData : [apiData];
+    const data = await response.json();
     
-    console.log('API Response in vehicleData:', apiData); // Add this to debug
-    
-    return dataArray.map((item: any): VehicleStats => ({
-      vehicleType: item.vehicle_type || item.vehicleType,
-      count: item.total_count || item.count,
-      in: item.total_in || item.in,
-      out: item.total_out || item.out,
-      details: {
-        morning: {
-          in: item.time_details?.morning?.vehicles_in || item.details?.morning?.in || 0,
-          out: item.time_details?.morning?.vehicles_out || item.details?.morning?.out || 0
-        },
-        afternoon: {
-          in: item.time_details?.afternoon?.vehicles_in || item.details?.afternoon?.in || 0,
-          out: item.time_details?.afternoon?.vehicles_out || item.details?.afternoon?.out || 0
-        },
-        evening: {
-          in: item.time_details?.evening?.vehicles_in || item.details?.evening?.in || 0,
-          out: item.time_details?.evening?.vehicles_out || item.details?.evening?.out || 0
-        },
-        night: {
-          in: item.time_details?.night?.vehicles_in || item.details?.night?.in || 0,
-          out: item.time_details?.night?.vehicles_out || item.details?.night?.out || 0
-        }
-      },
-      lastUpdated: item.last_updated || item.lastUpdated || new Date().toISOString(),
-      rawData: item
+    // Transform the data into VehicleStats array
+    return Object.entries(data).map(([key, value]: [string, any]): VehicleStats => ({
+      vehicleType: key,
+      count: value.count || 0,
+      in: value.in || 0,
+      out: value.out || 0,
+      lastUpdated: value.lastUpdated || new Date().toISOString(),
+      rawData: value
     }));
   } catch (error) {
     console.error('Error fetching vehicle data:', error);
@@ -198,4 +172,42 @@ export const getVehicleData = async (): Promise<VehicleStats[]> => {
 export const invalidateCache = () => {
   cachedData = null;
   lastFetchTime = 0;
+};// Add new function to fetch filtered data
+export const fetchFilteredData = async (
+  collection: string,
+  videoSource: string,
+  rules: string[],
+  startTime?: string,
+  endTime?: string
+): Promise<FilteredStats> => {
+  try {
+    const queryParams = new URLSearchParams({
+      collection,
+      VideoSource: videoSource,
+      Rule: rules.join(',')
+    });
+
+    if (startTime) queryParams.append('startTime', startTime);
+    if (endTime) queryParams.append('endTime', endTime);
+
+    const response = await fetch(
+      `${API_URL}/api/v1/Collection/filtered/count?${queryParams}`,
+      {
+        credentials: 'include',
+        headers: {
+          'Accept': 'application/json',
+        },
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch filtered data');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching filtered data:', error);
+    throw error;
+  }
 };
+
