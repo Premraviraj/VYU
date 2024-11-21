@@ -7,10 +7,10 @@ import { ChromePicker } from 'react-color';
 import {
   ScatterChart, Scatter, ComposedChart, XAxis, YAxis, CartesianGrid, 
   Tooltip, Legend, Bar, Line, Cell,
-  LineChart, BarChart, PieChart, Pie, RadialBarChart, RadialBar
+  LineChart, BarChart, PieChart, Pie, AreaChart, Area
 } from 'recharts';
-import ColorLensIcon from '@mui/icons-material/ColorLens';
-import StackLoader from '../../common/StackLoader';
+import { ResponsiveContainer } from 'recharts';
+import { API_URL } from '../../../utils/config';
 
 interface GraphModalProps {
   isOpen: boolean;
@@ -19,7 +19,7 @@ interface GraphModalProps {
   onGraphCreated?: () => void;
 }
 
-type GraphType = 'scatter' | 'composed' | 'horizontalBar' | 'jointLineScatter' | 'simpleLine' | 'verticalBar' | 'pie' | 'radialBar';
+type GraphType = 'bar' | 'line' | 'pie' | 'area' | 'composed';
 
 interface FormattedData {
   label: string;
@@ -27,6 +27,13 @@ interface FormattedData {
   Exit: number;
   Total: number;
   value: number;
+}
+
+interface CollectionData {
+  collection: string;
+  fieldCounts: {
+    [key: string]: number;
+  };
 }
 
 const formatVehicleData = (vehicle: VehicleStats): FormattedData => {
@@ -46,7 +53,7 @@ const formatVehicleData = (vehicle: VehicleStats): FormattedData => {
 };
 
 const GraphModal: React.FC<GraphModalProps> = ({ isOpen, onClose, selectedData, onGraphCreated }) => {
-  const [selectedGraphType, setSelectedGraphType] = useState<GraphType>('scatter');
+  const [selectedGraphType, setSelectedGraphType] = useState<GraphType>('bar');
   const { addGraph } = useGraphs();
   const { addWidget } = useWidgets();
   const [graphTitle, setGraphTitle] = useState('');
@@ -109,329 +116,257 @@ const GraphModal: React.FC<GraphModalProps> = ({ isOpen, onClose, selectedData, 
 
   const graphOptions = [
     { 
-      type: 'scatter',
-      label: 'Scatter Plot',
+      type: 'bar',
+      label: 'Bar Chart',
       icon: (
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="graph-icon">
-          <path d="M3 3v18h18M7 14l3-6 4 8 3-4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M4 20h16M4 20V4m0 16l4-4v4m4 0V10m0 10l4-8v8m4 0V6l-4 14" 
+            strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
         </svg>
       ),
-      description: 'Show trends over time'
+      description: 'Compare values across categories',
+      features: ['Easy to read', 'Shows exact values', 'Good for comparisons'],
+      bestFor: 'Comparing quantities between different categories'
     },
     { 
-      type: 'composed',
-      label: 'Composed Chart',
+      type: 'line',
+      label: 'Line Chart',
       icon: (
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="graph-icon">
-          <path d="M4 20h16M4 20V4m0 16l4-4v4m4 0V10m0 10l4-8v8m4 0V6l-4 14" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M3 12h4l3-9 4 18 3-9h4M3 20h18" 
+            strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
         </svg>
       ),
-      description: 'Compare values across categories'
-    },
-    { 
-      type: 'horizontalBar',
-      label: 'Horizontal Bar Chart',
-      icon: (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="graph-icon">
-          <path d="M12 2v10l8.5 5M12 2a10 10 0 1 0 8.5 15L12 12" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-        </svg>
-      ),
-      description: 'Show proportions of a whole'
-    },
-    { 
-      type: 'jointLineScatter',
-      label: 'Joint Line Scatter',
-      icon: (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="graph-icon">
-          <path d="M3 12h4l3-9 4 18 3-9h4M3 20h18" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-          <path d="M3 12h4l3-9 4 18 3-9h4V20H3z" fill="currentColor" fillOpacity="0.2"/>
-        </svg>
-      ),
-      description: 'Visualize cumulative totals'
-    },
-    { 
-      type: 'simpleLine',
-      label: 'Simple Line',
-      icon: (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="graph-icon">
-          <path d="M3 3v18h18M7 14l3-6 4 8 3-4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-        </svg>
-      ),
-      description: 'Basic line chart'
-    },
-    { 
-      type: 'verticalBar',
-      label: 'Vertical Bar',
-      icon: (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="graph-icon">
-          <path d="M4 20h16M4 20V4m0 16l4-4v4m4 0V10m0 10l4-8v8m4 0V6l-4 14" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-        </svg>
-      ),
-      description: 'Vertical bar comparison'
+      description: 'Show trends over time',
+      features: ['Shows trends', 'Good for continuous data', 'Displays patterns'],
+      bestFor: 'Visualizing trends and patterns over time'
     },
     { 
       type: 'pie',
       label: 'Pie Chart',
       icon: (
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="graph-icon">
-          <path d="M12 2v10l8.5 5M12 2a10 10 0 1 0 8.5 15L12 12" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M12 2v10l8.5 5M12 2a10 10 0 1 0 8.5 15L12 12" 
+            strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
         </svg>
       ),
-      description: 'Show proportions'
+      description: 'Show proportions of a whole',
+      features: ['Shows parts of a whole', 'Good for percentages', 'Visual distribution'],
+      bestFor: 'Displaying parts of a whole as percentages'
     },
     { 
-      type: 'radialBar',
-      label: 'Radial Bar',
+      type: 'area',
+      label: 'Area Chart',
       icon: (
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="graph-icon">
-          <circle cx="12" cy="12" r="10" strokeWidth="2"/>
-          <path d="M12 2a10 10 0 0 1 10 10" strokeWidth="2" strokeLinecap="round"/>
+          <path d="M3 3v18h18M7 14l3-6 4 8 3-4" 
+            strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M7 14l3-6 4 8 3-4V20H7z" fill="currentColor" fillOpacity="0.2"/>
         </svg>
       ),
-      description: 'Circular progress bars'
+      description: 'Visualize cumulative totals',
+      features: ['Shows volume over time', 'Good for cumulative data', 'Highlights trends'],
+      bestFor: 'Showing accumulated values over time'
     },
+    { 
+      type: 'composed',
+      label: 'Composed Chart',
+      icon: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="graph-icon">
+          <path d="M4 20h16M4 20V4m0 16l4-4v4m4 0V10m0 10l4-8v8m4 0V6l-4 14" 
+            strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M3 12h4l3-9 4 18 3-9h4" 
+            strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" strokeDasharray="4 4"/>
+        </svg>
+      ),
+      description: 'Combine different chart types',
+      features: ['Multiple chart types', 'Complex data visualization', 'Flexible display'],
+      bestFor: 'Combining multiple types of data visualization'
+    }
   ] as const;
 
   const generateChartComponent = (type: GraphType) => {
-    // Transform data using the formatting function
-    const formattedData: FormattedData[] = selectedData.map(formatVehicleData);
+    const formattedData = selectedData.map(formatVehicleData);
 
-    console.log('Formatted Chart Data:', formattedData);
-
-    const containerStyle = {
-      width: '100%',
-      height: '300px',
-      maxWidth: '600px',
-      margin: '0 auto'
+    const commonProps = {
+      margin: { top: 20, right: 30, left: 20, bottom: 20 },
+      style: {
+        background: 'linear-gradient(165deg, rgba(255, 255, 255, 0.95), rgba(252, 253, 255, 0.9))',
+        borderRadius: '12px',
+      }
     };
 
     switch (type) {
-      case 'scatter':
+      case 'bar':
         return (
-          <div style={containerStyle}>
-            <ScatterChart width={500} height={300}>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={formattedData} {...commonProps}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="label" />
               <YAxis />
-              <Tooltip cursor={{ strokeDasharray: '3 3' }} />
-              <Legend />
-              {selectedData.map((vehicle, index) => (
-                <Scatter
-                  key={vehicle.vehicleType}
-                  name={vehicle.vehicleType}
-                  data={formattedData.map(d => ({
-                    x: d.label,
-                    y: d.Entry,
-                    z: d.Exit
-                  }))}
-                  fill={colors[`vehicle-${index}`].total}
-                />
-              ))}
-            </ScatterChart>
-          </div>
-        );
-
-      case 'composed':
-        return (
-          <div style={containerStyle}>
-            <ComposedChart width={500} height={300} data={formattedData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis />
               <Tooltip />
               <Legend />
-              {selectedData.map((vehicle, index) => (
-                <React.Fragment key={vehicle.vehicleType}>
-                  <Bar
-                    dataKey={vehicle.vehicleType}
-                    fill={colors[`vehicle-${index}`].total}
-                    opacity={0.8}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey={`Exit`}
-                    stroke={colors[`vehicle-${index}`].out}
-                    strokeWidth={2}
-                    dot={{ fill: colors[`vehicle-${index}`].out }}
-                  />
-                </React.Fragment>
-              ))}
-            </ComposedChart>
-          </div>
-        );
-
-      case 'horizontalBar':
-        return (
-          <div style={containerStyle}>
-            <ComposedChart
-              layout="vertical"
-              width={500}
-              height={300}
-              data={formattedData}
-            >
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis type="number" />
-              <YAxis dataKey="name" type="category" />
-              <Tooltip />
-              <Legend />
-              {selectedData.map((vehicle, index) => (
-                <Bar
-                  key={vehicle.vehicleType}
-                  dataKey={vehicle.vehicleType}
-                  fill={colors[`vehicle-${index}`].total}
-                  barSize={20}
-                >
-                  {formattedData.map((entry, i) => (
-                    <Cell
-                      key={`cell-${i}`}
-                      fill={colors[`vehicle-${index}`].total}
-                      fillOpacity={0.8 - (i * 0.15)}
-                    />
-                  ))}
-                </Bar>
-              ))}
-            </ComposedChart>
-          </div>
-        );
-
-      case 'jointLineScatter':
-        return (
-          <div style={containerStyle}>
-            <ComposedChart width={500} height={300} data={formattedData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              {selectedData.map((vehicle, index) => (
-                <React.Fragment key={vehicle.vehicleType}>
-                  <Line
-                    type="monotone"
-                    dataKey={vehicle.vehicleType}
-                    stroke={colors[`vehicle-${index}`].total}
-                    strokeWidth={2}
-                  />
-                  <Scatter
-                    dataKey={vehicle.vehicleType}
-                    fill={colors[`vehicle-${index}`].total}
-                    name={`${vehicle.vehicleType} Points`}
-                  />
-                </React.Fragment>
-              ))}
-            </ComposedChart>
-          </div>
-        );
-
-      case 'simpleLine':
-        return (
-          <div style={containerStyle}>
-            <LineChart width={500} height={300} data={formattedData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              {selectedData.map((vehicle, index) => (
-                <Line
-                  key={vehicle.vehicleType}
-                  type="monotone"
-                  dataKey={vehicle.vehicleType}
-                  stroke={colors[`vehicle-${index}`].total}
-                  strokeWidth={2}
-                  dot={{ fill: colors[`vehicle-${index}`].total }}
-                />
-              ))}
-            </LineChart>
-          </div>
-        );
-
-      case 'verticalBar':
-        return (
-          <div style={containerStyle}>
-            <BarChart width={500} height={300} data={formattedData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              {selectedData.map((vehicle, index) => (
-                <Bar
-                  key={vehicle.vehicleType}
-                  dataKey={vehicle.vehicleType}
-                  fill={colors[`vehicle-${index}`].total}
-                />
-              ))}
+              <Bar 
+                dataKey="Entry" 
+                fill="#059669"
+                radius={[4, 4, 0, 0]}
+                maxBarSize={50}
+                animationDuration={1500}
+              />
+              <Bar 
+                dataKey="Exit" 
+                fill="#dc2626"
+                radius={[4, 4, 0, 0]}
+                maxBarSize={50}
+                animationDuration={1500}
+              />
+              <Bar 
+                dataKey="Total" 
+                fill="#4f46e5"
+                radius={[4, 4, 0, 0]}
+                maxBarSize={50}
+                animationDuration={1500}
+              />
             </BarChart>
-          </div>
+          </ResponsiveContainer>
+        );
+
+      case 'line':
+        return (
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={formattedData} {...commonProps}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="label" />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              <Line 
+                type="monotone" 
+                dataKey="Total" 
+                stroke="#4f46e5"
+                strokeWidth={2}
+                dot={{ fill: '#ffffff', stroke: '#4f46e5', strokeWidth: 2, r: 4 }}
+                activeDot={{ r: 6, stroke: '#ffffff', strokeWidth: 2 }}
+              />
+              <Line 
+                type="monotone" 
+                dataKey="Entry" 
+                stroke="#059669"
+                strokeWidth={2}
+                dot={{ fill: '#ffffff', stroke: '#059669', strokeWidth: 2, r: 4 }}
+                activeDot={{ r: 6, stroke: '#ffffff', strokeWidth: 2 }}
+              />
+              <Line 
+                type="monotone" 
+                dataKey="Exit" 
+                stroke="#dc2626"
+                strokeWidth={2}
+                dot={{ fill: '#ffffff', stroke: '#dc2626', strokeWidth: 2, r: 4 }}
+                activeDot={{ r: 6, stroke: '#ffffff', strokeWidth: 2 }}
+              />
+            </LineChart>
+          </ResponsiveContainer>
         );
 
       case 'pie':
         return (
-          <div style={containerStyle}>
-            <PieChart width={500} height={300}>
+          <ResponsiveContainer width="100%" height={300}>
+            <PieChart {...commonProps}>
               <Pie
-                data={selectedData}
-                dataKey="count"
-                nameKey="vehicleType"
+                data={formattedData}
+                dataKey="Total"
+                nameKey="label"
                 cx="50%"
                 cy="50%"
                 outerRadius={100}
                 label
               >
-                {selectedData.map((entry, index) => (
+                {formattedData.map((entry, index) => (
                   <Cell 
-                    key={entry.vehicleType} 
-                    fill={colors[`vehicle-${index}`].total}
+                    key={`cell-${index}`}
+                    fill={colors[`vehicle-${index}`]?.total || '#4f46e5'}
                   />
                 ))}
               </Pie>
               <Tooltip />
               <Legend />
             </PieChart>
-          </div>
+          </ResponsiveContainer>
         );
 
-      case 'radialBar':
+      case 'area':
         return (
-          <div style={containerStyle}>
-            <RadialBarChart 
-              width={500} 
-              height={300} 
-              innerRadius="10%" 
-              outerRadius="80%" 
-              data={selectedData.map((vehicle, index) => ({
-                name: vehicle.vehicleType,
-                value: vehicle.count,
-                fill: colors[`vehicle-${index}`].total
-              }))}
-              startAngle={0}
-              endAngle={360}
-            >
-              <RadialBar
-                angleAxisId={0}
-                dataKey="value"
-                background
-                cornerRadius={10}
-                label={{
-                  position: 'insideStart',
-                  fill: '#666',
-                }}
-              />
-              <Legend 
-                iconSize={10}
-                width={120}
-                height={140}
-                layout="vertical"
-                verticalAlign="middle"
-                align="right"
-              />
+          <ResponsiveContainer width="100%" height={300}>
+            <AreaChart data={formattedData} {...commonProps}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="label" />
+              <YAxis />
               <Tooltip />
-            </RadialBarChart>
-          </div>
+              <Legend />
+              <Area 
+                type="monotone" 
+                dataKey="Total" 
+                fill="#4f46e5" 
+                stroke="#4f46e5"
+                fillOpacity={0.3}
+              />
+              <Area 
+                type="monotone" 
+                dataKey="Entry" 
+                fill="#059669" 
+                stroke="#059669"
+                fillOpacity={0.3}
+              />
+              <Area 
+                type="monotone" 
+                dataKey="Exit" 
+                fill="#dc2626" 
+                stroke="#dc2626"
+                fillOpacity={0.3}
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        );
+
+      case 'composed':
+        return (
+          <ResponsiveContainer width="100%" height={300}>
+            <ComposedChart data={formattedData} {...commonProps}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="label" />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              <Bar 
+                dataKey="Total" 
+                fill="#4f46e5"
+                radius={[4, 4, 0, 0]}
+                maxBarSize={50}
+              />
+              <Line 
+                type="monotone" 
+                dataKey="Entry" 
+                stroke="#059669"
+                strokeWidth={2}
+                dot={{ fill: '#ffffff', stroke: '#059669', strokeWidth: 2, r: 4 }}
+              />
+              <Line 
+                type="monotone" 
+                dataKey="Exit" 
+                stroke="#dc2626"
+                strokeWidth={2}
+                dot={{ fill: '#ffffff', stroke: '#dc2626', strokeWidth: 2, r: 4 }}
+              />
+            </ComposedChart>
+          </ResponsiveContainer>
         );
 
       default:
-        return null;
+        return (
+          <div className="unsupported-graph">
+            <p>Graph type not supported: {type}</p>
+          </div>
+        );
     }
   };
 
@@ -439,59 +374,129 @@ const GraphModal: React.FC<GraphModalProps> = ({ isOpen, onClose, selectedData, 
     setSelectedGraphType(type);
   };
 
-  const handleCreateGraph = () => {
-    if (previewRef.current) {
-      const chartComponent = generateChartComponent(selectedGraphType);
-      if (chartComponent) {
-        const graphId = `graph-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-        
-        // Transform the data using the formatting function
-        const formattedData = selectedData.map(formatVehicleData);
+  const [availableCollections, setAvailableCollections] = useState<string[]>([]);
+  const [selectedCollection, setSelectedCollection] = useState<string>('');
+  const [availableVideoSources, setAvailableVideoSources] = useState<string[]>([]);
+  const [selectedVideoSource, setSelectedVideoSource] = useState<string>('1');
+  const [availableFields, setAvailableFields] = useState<{[key: string]: number}>({});
+  const [selectedFields, setSelectedFields] = useState<string[]>([]);
 
-        const newGraph: Graph = {
-          id: graphId,
-          type: 'graph',
-          title: graphTitle || 'Vehicle Statistics',
-          data: {
-            type: selectedGraphType,
-            selectedData: formattedData
-          },
-          backgroundColor: selectedColor,
-          colors: colors
-        };
-
-        addGraph(graphId, newGraph);
-        onGraphCreated?.();
-        onClose();
+  const fetchCollections = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/v1/allCollections`, {
+        credentials: 'include'
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setAvailableCollections(data.collections);
       }
+    } catch (error) {
+      console.error('Error fetching collections:', error);
     }
   };
 
-  const colorCards = [
+  const fetchVideoSources = async (collection: string) => {
+    try {
+      const response = await fetch(
+        `${API_URL}/api/v1/Collection/videoSources?collection=${collection}`,
+        { credentials: 'include' }
+      );
+      if (response.ok) {
+        const data = await response.json();
+        setAvailableVideoSources(data.videoSources.map((vs: any) => vs.source));
+      }
+    } catch (error) {
+      console.error('Error fetching video sources:', error);
+    }
+  };
+
+  const fetchFields = async (collection: string, videoSource: string) => {
+    try {
+      const response = await fetch(
+        `${API_URL}/api/v1/Collection/filtered/count?collection=${collection}&VideoSource=${videoSource}`,
+        { credentials: 'include' }
+      );
+      if (response.ok) {
+        const data = await response.json();
+        setAvailableFields(data.fieldCounts);
+      }
+    } catch (error) {
+      console.error('Error fetching fields:', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchCollections();
+  }, []);
+
+  const handleCreateGraph = () => {
+    if (selectedFields.length === 0) {
+      console.warn('Please select at least one field');
+      return;
+    }
+
+    const selectedData = selectedFields.map(field => ({
+      name: field,
+      value: availableFields[field],
+      filteredStats: {
+        VideoSource: selectedVideoSource,
+        RuleCounts: {
+          Entry: availableFields[field],
+          Exit: availableFields[field],
+          Total: availableFields[field]
+        }
+      }
+    }));
+
+    // Create the graph with selected data
+    const graphId = `graph-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const chartComponent = generateChartComponent(selectedGraphType);
+    
+    if (chartComponent) {
+      const widgetContent = `
+        <div class="graph-widget" style="width: 100%; height: 100%;">
+          ${previewRef.current?.innerHTML}
+        </div>
+      `;
+
+      const newWidget = {
+        id: graphId,
+        type: 'graph' as const,
+        title: graphTitle || 'Vehicle Statistics',
+        content: widgetContent,
+        backgroundColor: selectedColor,
+        data: {
+          type: selectedGraphType,
+          selectedData: selectedData
+        }
+      };
+
+      addWidget(newWidget);
+      onGraphCreated?.();
+      onClose();
+    }
+  };
+
+  const colorOptions = [
     { 
-      id: 1, 
-      mainColor: '#FFB5B5', // Pastel Red
-      shades: ['#FFD1D1', '#FFE3E3', '#FFF0F0', '#FFF5F5']
+      mainColor: '#FFB5B5', // Light Red
+      shades: ['#FFD1D1', '#FFE3E3', '#FFF0F0']
     },
     { 
-      id: 2, 
-      mainColor: '#B5E8FF', // Pastel Blue
-      shades: ['#D1F0FF', '#E3F6FF', '#F0FAFF', '#F5FCFF']
+      mainColor: '#B5E8FF', // Light Blue
+      shades: ['#D1F0FF', '#E3F6FF', '#F0FAFF']
     },
     { 
-      id: 3, 
-      mainColor: '#B5FFD9', // Pastel Green
-      shades: ['#D1FFE7', '#E3FFF0', '#F0FFF6', '#F5FFF9']
+      mainColor: '#B5FFD9', // Light Green
+      shades: ['#D1FFE7', '#E3FFF0', '#F0FFF6']
     },
     { 
-      id: 4, 
-      mainColor: '#FFE5B5', // Pastel Orange
-      shades: ['#FFEED1', '#FFF4E3', '#FFF8F0', '#FFFBF5']
+      mainColor: '#FFE5B5', // Light Orange
+      shades: ['#FFEED1', '#FFF4E3', '#FFF8F0']
     },
     { 
-      id: 5, 
-      mainColor: '#E0B5FF', // Pastel Purple
-      shades: ['#EBD1FF', '#F2E3FF', '#F7F0FF', '#FBF5FF']
+      mainColor: '#E0B5FF', // Light Purple
+      shades: ['#EBD1FF', '#F2E3FF', '#F7F0FF']
     }
   ];
 
@@ -535,19 +540,20 @@ const GraphModal: React.FC<GraphModalProps> = ({ isOpen, onClose, selectedData, 
           <div className="color-selection-section">
             <h3>Background Color</h3>
             <div className="color-cards">
-              {colorCards.map(card => (
-                <div 
-                  key={card.id}
-                  className={`color-card ${selectedColor === card.mainColor ? 'selected' : ''}`}
-                  onClick={() => setSelectedColor(card.mainColor)}
-                >
-                  <div className="color-main" style={{ backgroundColor: card.mainColor }} />
+              {colorOptions.map((card) => (
+                <div key={card.mainColor} className="color-card">
+                  <div
+                    className="main-color"
+                    style={{ background: card.mainColor }}
+                    onClick={() => setSelectedColor(card.mainColor)}
+                  />
                   <div className="color-shades">
                     {card.shades.map((shade, index) => (
-                      <div 
+                      <div
                         key={index}
-                        className="color-shade"
-                        style={{ backgroundColor: shade }}
+                        className="shade"
+                        style={{ background: shade }}
+                        onClick={() => setSelectedColor(shade)}
                       />
                     ))}
                   </div>
@@ -556,18 +562,119 @@ const GraphModal: React.FC<GraphModalProps> = ({ isOpen, onClose, selectedData, 
             </div>
           </div>
           
-          <div className="graph-options">
-            {graphOptions.map(({ type, label, icon, description }) => (
-              <div
-                key={type}
-                className={`graph-option ${selectedGraphType === type ? 'selected' : ''}`}
-                onClick={() => handleGraphTypeSelect(type)}
-              >
-                <span className="graph-icon">{icon}</span>
-                <span className="graph-label">{label}</span>
-                <span className="graph-description">{description}</span>
+          <div className="config-section field-config">
+            <div className="section-header">
+              <h3>Select Data</h3>
+            </div>
+
+            <div className="data-selection-flow">
+              {/* Collection Selection */}
+              <div className="selection-group">
+                <h4>Select Collection</h4>
+                <div className="collection-buttons">
+                  {availableCollections.map(collection => (
+                    <button
+                      key={collection}
+                      className={`selection-button ${selectedCollection === collection ? 'selected' : ''}`}
+                      onClick={() => {
+                        setSelectedCollection(collection);
+                        fetchVideoSources(collection);
+                        setSelectedFields([]); // Reset selected fields
+                      }}
+                    >
+                      {collection}
+                    </button>
+                  ))}
+                </div>
               </div>
-            ))}
+
+              {/* Video Source Selection */}
+              {selectedCollection && (
+                <div className="selection-group">
+                  <h4>Select Video Source</h4>
+                  <div className="source-buttons">
+                    {availableVideoSources.map(source => (
+                      <button
+                        key={source}
+                        className={`source-button ${selectedVideoSource === source ? 'selected' : ''}`}
+                        onClick={() => {
+                          setSelectedVideoSource(source);
+                          fetchFields(selectedCollection, source);
+                          setSelectedFields([]); // Reset selected fields
+                        }}
+                      >
+                        Source {source}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Field Selection */}
+              {selectedCollection && selectedVideoSource && (
+                <div className="selection-group">
+                  <h4>Select Fields</h4>
+                  <div className="fields-grid">
+                    {Object.entries(availableFields).map(([field, count]) => (
+                      <div
+                        key={field}
+                        className={`field-item ${selectedFields.includes(field) ? 'selected' : ''}`}
+                        onClick={() => {
+                          setSelectedFields(prev => {
+                            const isSelected = prev.includes(field);
+                            if (isSelected) {
+                              return prev.filter(f => f !== field);
+                            } else {
+                              return [...prev, field];
+                            }
+                          });
+                        }}
+                      >
+                        <div className="field-name">{field}</div>
+                        <div className="field-count">{count}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="config-section">
+            <h3>Select Graph Type</h3>
+            <div className="graph-options">
+              {graphOptions.map(option => (
+                <div
+                  key={option.type}
+                  className={`graph-option ${selectedGraphType === option.type ? 'selected' : ''}`}
+                  onClick={() => handleGraphTypeSelect(option.type)}
+                >
+                  <div className="graph-option-icon">
+                    {option.icon}
+                  </div>
+                  <div className="graph-option-content">
+                    <h4>{option.label}</h4>
+                    <p className="graph-description">{option.description}</p>
+                    <div className="graph-features">
+                      {option.features.map((feature, index) => (
+                        <span key={index} className="feature-tag">{feature}</span>
+                      ))}
+                    </div>
+                    <div className="best-for">
+                      <span className="best-for-label">Best for:</span>
+                      <span className="best-for-text">{option.bestFor}</span>
+                    </div>
+                  </div>
+                  {selectedGraphType === option.type && (
+                    <div className="selected-indicator">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path d="M20 6L9 17l-5-5" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
 
           <div className="color-options">

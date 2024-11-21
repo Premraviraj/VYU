@@ -18,6 +18,7 @@ import StackLoader from '../../common/StackLoader';
 import { BarChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, Bar } from 'recharts';
 import { PieChart, Pie, Cell } from 'recharts';
 import { VehicleStats as ImportedVehicleStats, RuleCounts as ImportedRuleCounts } from '../../../data/vehicleData';
+import StorageRoundedIcon from '@mui/icons-material/StorageRounded';
 
 interface TimeValue {
   in: number;
@@ -80,6 +81,11 @@ interface VideoSourceResponse {
 // Add WebSocket connection
 const ws = new WebSocket('ws://localhost:8080');
 
+interface ExpandedCardState {
+  collectionName: string;
+  videoSource: string;
+}
+
 const WidgetsPage: React.FC = () => {
   const [isGraphModalOpen, setIsGraphModalOpen] = useState(false);
   const [isKPIModalOpen, setIsKPIModalOpen] = useState(false);
@@ -92,9 +98,8 @@ const WidgetsPage: React.FC = () => {
   const [loadingDetails, setLoadingDetails] = useState<{ [key: string]: boolean }>({});
   const [collectionData, setCollectionData] = useState<{ [key: string]: any }>({});
   const [loadingCollectionData, setLoadingCollectionData] = useState<{ [key: string]: boolean }>({});
-  const [expandedCardId, setExpandedCardId] = useState<string | null>(null);
+  const [expandedCard, setExpandedCard] = useState<ExpandedCardState | null>(null);
   const [selectedCollection, setSelectedCollection] = useState<string | null>(null);
-  const [showPopup, setShowPopup] = useState(false);
   const [filteredData, setFilteredData] = useState<FilteredData | null>(null);
   const [selectedVideoSource, setSelectedVideoSource] = useState<string>('1');
   const [availableVideoSources, setAvailableVideoSources] = useState<string[]>([]);
@@ -234,19 +239,25 @@ const WidgetsPage: React.FC = () => {
     }
   };
 
-  // Update handleCollectionClick to fetch video sources first
+  // Modify handleCollectionClick
   const handleCollectionClick = async (collectionName: string, e: React.MouseEvent) => {
     e.stopPropagation();
     try {
-      setSelectedCollection(collectionName);
-      setShowPopup(true);
-      
-      // First fetch available video sources
+      // If clicking the same collection, collapse it
+      if (expandedCard?.collectionName === collectionName) {
+        setExpandedCard(null);
+        return;
+      }
+
+      // Fetch video sources first
       await fetchVideoSources(collectionName);
       
-      // Then fetch filtered data with the first available source
+      // Use the first video source or default to '1'
+      const initialSource = availableVideoSources[0] || '1';
+      
+      // Fetch filtered data
       const response = await fetch(
-        `${API_URL}/api/v1/Collection/filtered/count?collection=${collectionName}&VideoSource=${selectedVideoSource}`,
+        `${API_URL}/api/v1/Collection/filtered/count?collection=${collectionName}&VideoSource=${initialSource}`,
         {
           method: 'GET',
           headers: {
@@ -262,8 +273,8 @@ const WidgetsPage: React.FC = () => {
       }
 
       const data = await response.json();
-      console.log(`Filtered data for ${collectionName}:`, data);
       setFilteredData(data);
+      setExpandedCard({ collectionName, videoSource: initialSource });
 
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -277,15 +288,11 @@ const WidgetsPage: React.FC = () => {
   };
 
   const handleCreateGraph = () => {
-    if (selectedData.length > 0) {
-      setIsGraphModalOpen(true);
-    }
+    setIsGraphModalOpen(true);
   };
 
   const handleCreateKPI = () => {
-    if (selectedData.length > 0) {
-      setIsKPIModalOpen(true);
-    }
+    setIsKPIModalOpen(true);
   };
 
   const handleGraphCreated = () => {
@@ -424,122 +431,6 @@ const WidgetsPage: React.FC = () => {
     });
   };
 
-  const DataPopup = () => {
-    if (!selectedCollection || !showPopup || !filteredData) return null;
-
-    const isFieldSelected = (field: string) => {
-      return selectedData.some(item => 
-        item.name === selectedCollection && 
-        item.field === field && 
-        item.videoSource === selectedVideoSource
-      );
-    };
-
-    const handleFieldClick = (field: string, count: number) => {
-      setSelectedData(prev => {
-        // Check if this exact field is already selected for this collection
-        const existingFieldIndex = prev.findIndex(item => 
-          item.name === selectedCollection && 
-          item.filteredStats?.RuleCounts[field] !== undefined
-        );
-
-        // If field exists, remove it
-        if (existingFieldIndex >= 0) {
-          return prev.filter((_, index) => index !== existingFieldIndex);
-        }
-
-        // Find if we already have an entry for this collection
-        const existingCollection = prev.find(item => item.name === selectedCollection);
-
-        if (existingCollection) {
-          // Update existing collection with new field
-          return prev.map(item => {
-            if (item.name === selectedCollection) {
-              return {
-                ...item,
-                filteredStats: {
-                  VideoSource: selectedVideoSource,
-                  RuleCounts: {
-                    ...item.filteredStats!.RuleCounts,
-                    [field]: count,
-                    Entry: field === 'Entry' ? count : item.filteredStats!.RuleCounts.Entry || 0,
-                    Exit: field === 'Exit' ? count : item.filteredStats!.RuleCounts.Exit || 0,
-                    Total: Math.max(count, item.filteredStats!.RuleCounts.Total || 0)
-                  }
-                }
-              };
-            }
-            return item;
-          });
-        }
-
-        // Add new collection with first field
-        return [...prev, {
-          name: selectedCollection,
-          filteredStats: {
-            VideoSource: selectedVideoSource,
-            RuleCounts: {
-              [field]: count,
-              Entry: field === 'Entry' ? count : 0,
-              Exit: field === 'Exit' ? count : 0,
-              Total: count
-            }
-          }
-        }];
-      });
-    };
-
-    return (
-      <div className="data-popup-overlay" onClick={() => setShowPopup(false)}>
-        <div className="data-popup" onClick={e => e.stopPropagation()}>
-          <div className="popup-header">
-            <h3>{selectedCollection}</h3>
-            <button className="close-button" onClick={() => setShowPopup(false)}>&times;</button>
-          </div>
-          
-          <div className="popup-content">
-            {/* Video Source Selection */}
-            <div className="video-source-selection">
-              <h4>Select Video Source</h4>
-              <div className="source-buttons">
-                {availableVideoSources.length > 0 ? (
-                  availableVideoSources.map(source => (
-                    <button
-                      key={source}
-                      className={`source-button ${selectedVideoSource === source ? 'selected' : ''}`}
-                      onClick={() => handleVideoSourceChange(source)}
-                    >
-                      Source {source}
-                    </button>
-                  ))
-                ) : (
-                  <div className="no-sources">No video sources available</div>
-                )}
-              </div>
-            </div>
-
-            {/* Field Counts Display */}
-            <div className="field-counts">
-              <h4>Available Fields</h4>
-              <div className="fields-grid">
-                {Object.entries(filteredData.fieldCounts).map(([field, count]) => (
-                  <div
-                    key={field}
-                    className={`field-item ${isFieldSelected(field) ? 'selected' : ''}`}
-                    onClick={() => handleFieldClick(field, count)}
-                  >
-                    <div className="field-name">{field}</div>
-                    <div className="field-count">{count}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
   const transformToVehicleStats = (selectedItems: SelectedDataItem[]): ImportedVehicleStats[] => {
     return selectedItems.map(item => {
       // Create a properly typed RuleCounts object with required fields
@@ -584,12 +475,12 @@ const WidgetsPage: React.FC = () => {
   };
 
   const handleVideoSourceChange = async (source: string) => {
-    setSelectedVideoSource(source);
+    if (!expandedCard?.collectionName) return;
     
     try {
       // Fetch new data with the selected video source
       const response = await fetch(
-        `${API_URL}/api/v1/Collection/filtered/count?collection=${selectedCollection}&VideoSource=${source}`,
+        `${API_URL}/api/v1/Collection/filtered/count?collection=${expandedCard.collectionName}&VideoSource=${source}`,
         {
           method: 'GET',
           headers: {
@@ -601,12 +492,13 @@ const WidgetsPage: React.FC = () => {
       );
 
       if (!response.ok) {
-        throw new Error(`Failed to fetch filtered data for ${selectedCollection}`);
+        throw new Error(`Failed to fetch filtered data for ${expandedCard.collectionName}`);
       }
 
       const data = await response.json();
-      console.log(`Filtered data for ${selectedCollection} with source ${source}:`, data);
       setFilteredData(data);
+      setExpandedCard(prev => prev ? { ...prev, videoSource: source } : null);
+      setSelectedVideoSource(source);
 
     } catch (error) {
       console.error('Error fetching filtered data:', error);
@@ -746,13 +638,17 @@ const WidgetsPage: React.FC = () => {
     }
   }, []);
 
+  const handleFieldClick = (field: string, count: number) => {
+    return; // This prevents any field selection
+  };
+
   return (
     <div className="widgets-page">
       <ToastContainer />
       <h1>Widgets</h1>
 
       <div className="data-selection-section">
-        <h2>Select Data</h2>
+        <h2>Collections</h2>
         {isLoading ? (
           <div className="loading-container">
             <StackLoader size="large" />
@@ -768,17 +664,54 @@ const WidgetsPage: React.FC = () => {
             {collectionsData.map((collectionName: string) => (
               <div
                 key={collectionName}
-                className={`collection-card ${
-                  selectedData.some(item => item.name === collectionName) ? 'selected' : ''
-                }`}
-                onClick={(e) => {
-                  handleDataSelection({ name: collectionName, field: '', count: 0, videoSource: '1' });
-                  handleCollectionClick(collectionName, e);
-                }}
+                className={`collection-card ${expandedCard?.collectionName === collectionName ? 'expanded' : ''}`}
+                onClick={(e) => handleCollectionClick(collectionName, e)}
               >
                 <div className="collection-header">
+                  <StorageRoundedIcon className="collection-icon" />
                   <h3>{collectionName}</h3>
                 </div>
+                
+                {/* Expanded content */}
+                {expandedCard?.collectionName === collectionName && filteredData && (
+                  <div className="expanded-content">
+                    {/* Video Source Selection */}
+                    <div className="video-source-selection">
+                      <h4>Video Sources</h4>
+                      <div className="source-buttons">
+                        {availableVideoSources.map(source => (
+                          <button
+                            key={source}
+                            className={`source-button ${expandedCard.videoSource === source ? 'selected' : ''}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleVideoSourceChange(source);
+                              setExpandedCard(prev => prev ? { ...prev, videoSource: source } : null);
+                            }}
+                          >
+                            Source {source}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Field Counts - Remove click handlers and selection styling */}
+                    <div className="field-counts">
+                      <h4>Available Fields</h4>
+                      <div className="fields-grid">
+                        {Object.entries(filteredData.fieldCounts).map(([field, count]) => (
+                          <div
+                            key={field}
+                            className="field-item"
+                          >
+                            <div className="field-name">{field}</div>
+                            <div className="field-count">{count}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -789,7 +722,7 @@ const WidgetsPage: React.FC = () => {
         <h2>Create Widgets</h2>
         <div className="widgets-grid">
           <div 
-            className={`widget-card ${selectedData.length === 0 ? 'disabled' : ''}`}
+            className="widget-card"
             onClick={handleCreateGraph}
           >
             <div className="widget-icon">
@@ -803,7 +736,7 @@ const WidgetsPage: React.FC = () => {
           </div>
 
           <div 
-            className={`widget-card ${selectedData.length === 0 ? 'disabled' : ''}`}
+            className="widget-card"
             onClick={handleCreateKPI}
           >
             <div className="widget-icon">
@@ -821,95 +754,16 @@ const WidgetsPage: React.FC = () => {
       <GraphModal
         isOpen={isGraphModalOpen}
         onClose={() => setIsGraphModalOpen(false)}
-        selectedData={transformToVehicleStats(selectedData)}
+        selectedData={[]}
         onGraphCreated={handleGraphCreated}
       />
 
       <KPIModal
         isOpen={isKPIModalOpen}
         onClose={() => setIsKPIModalOpen(false)}
-        selectedData={transformToVehicleStats(selectedData)}
+        selectedData={[]}
         onKPICreated={handleKPICreated}
       />
-
-      <DataPopup />
-
-      <div className="graphs-section">
-        <h2>Created Graphs</h2>
-        <div className="graphs-container">
-          {Object.entries(graphs).map(([id, graph]) => (
-            <div key={id} className="graph-container">
-              <div className="graph-header">
-                <h3>{graph.title}</h3>
-                <button 
-                  className="remove-graph"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    removeGraph(id);
-                  }}
-                >
-                  ×
-                </button>
-              </div>
-              
-              <div 
-                className="graph-content"
-                style={{ 
-                  background: graph.backgroundColor,
-                  padding: '2rem',
-                  borderRadius: '12px',
-                  minHeight: '400px',
-                  display: 'flex',
-                  justifyContent: 'center',
-                  alignItems: 'center'
-                }}
-              >
-                {graph.data.type === 'verticalBar' && (
-                  <BarChart width={500} height={300} data={graph.data.selectedData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="label" />
-                    <YAxis />
-                    <Tooltip />
-                    <Legend />
-                    <Bar dataKey="Entry" fill="#059669" />
-                    <Bar dataKey="Exit" fill="#dc2626" />
-                    <Bar dataKey="Total" fill="#4f46e5" />
-                  </BarChart>
-                )}
-                
-                {graph.data.type === 'pie' && (
-                  <PieChart width={500} height={300}>
-                    <Pie
-                      data={graph.data.selectedData}
-                      dataKey="value"
-                      nameKey="label"
-                      cx="50%"
-                      cy="50%"
-                      outerRadius={100}
-                      label
-                    >
-                      {graph.data.selectedData.map((entry, index) => {
-                        const color = entry.label.toLowerCase().includes('entry') ? '#059669' : 
-                                     entry.label.toLowerCase().includes('exit') ? '#dc2626' : '#4f46e5';
-                        return <Cell key={`cell-${index}`} fill={color} />;
-                      })}
-                    </Pie>
-                    <Tooltip />
-                    <Legend />
-                  </PieChart>
-                )}
-                
-                {/* Add other graph types similarly */}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Add the widgets container with ref */}
-      <div ref={containerRef} className="widgets-container">
-        {/* KPI widgets will be added here */}
-      </div>
     </div>
   );
 };

@@ -3,6 +3,15 @@ import { VehicleStats } from '../../../data/vehicleData';
 import { useWidgets } from '../../../context/WidgetContext';
 import './KPIModal.css';
 import { API_URL } from '../../../utils/config';
+import {
+  Dashboard, TrendingUp, Assessment, Timeline, PieChart, BarChart,
+  ShowChart, BubbleChart, DonutLarge, Insights, Analytics, 
+  Speed, Timer, AccessTime, CalendarToday, Event,
+  Person, Group, Groups, Business, Store,
+  LocalShipping, DirectionsCar, FlightTakeoff, Train,
+  Security, Shield, Gavel, VerifiedUser,
+  Notifications, Warning, Error, CheckCircle
+} from '@mui/icons-material';
 
 interface KPIModalProps {
   isOpen: boolean;
@@ -23,6 +32,7 @@ interface KPIField {
   format?: string;
   size?: string;
   showAdvanced?: boolean;
+  customIcon?: React.ReactNode;
 }
 
 interface CollectionData {
@@ -99,18 +109,6 @@ const KPIModal: React.FC<KPIModalProps> = ({ isOpen, onClose, selectedData, onKP
     ));
   };
 
-  const handleAddField = () => {
-    const newField: KPIField = {
-      id: `custom-${Date.now()}`,
-      label: 'New Field',
-      value: 0,
-      color: '#4f46e5',
-      format: 'number',
-      size: 'medium'
-    };
-    setKpiFields(prev => [...prev, newField]);
-  };
-
   const handleRemoveField = (fieldId: string) => {
     setKpiFields(prev => prev.filter(field => field.id !== fieldId));
   };
@@ -135,11 +133,26 @@ const KPIModal: React.FC<KPIModalProps> = ({ isOpen, onClose, selectedData, onKP
   ];
 
   const colorOptions = [
-    { label: 'White', value: '#ffffff' },
-    { label: 'Light Blue', value: '#f0f9ff' },
-    { label: 'Light Purple', value: '#f3e8ff' },
-    { label: 'Light Green', value: '#f0fdf4' },
-    { label: 'Light Yellow', value: '#fefce8' }
+    { 
+      mainColor: '#FFB5B5', // Light Red
+      shades: ['#FFD1D1', '#FFE3E3', '#FFF0F0']
+    },
+    { 
+      mainColor: '#B5E8FF', // Light Blue
+      shades: ['#D1F0FF', '#E3F6FF', '#F0FAFF']
+    },
+    { 
+      mainColor: '#B5FFD9', // Light Green
+      shades: ['#D1FFE7', '#E3FFF0', '#F0FFF6']
+    },
+    { 
+      mainColor: '#FFE5B5', // Light Orange
+      shades: ['#FFEED1', '#FFF4E3', '#FFF8F0']
+    },
+    { 
+      mainColor: '#E0B5FF', // Light Purple
+      shades: ['#EBD1FF', '#F2E3FF', '#F7F0FF']
+    }
   ];
 
   const fieldThemes: FieldTheme[] = [
@@ -231,9 +244,23 @@ const KPIModal: React.FC<KPIModalProps> = ({ isOpen, onClose, selectedData, onKP
             <h3>{kpiTitle || 'KPI Title'}</h3>
             <div className="kpi-fields-grid">
               {kpiFields.map((field) => (
-                <div key={field.id} className="kpi-field" style={{ color: field.color }}>
+                <div 
+                  key={field.id} 
+                  className="kpi-field"
+                  style={{ 
+                    color: field.color,
+                    fontSize: getSizeStyle(field.size || 'medium')
+                  }}
+                >
+                  {field.customIcon && (
+                    <div className="field-icon">
+                      {field.customIcon}
+                    </div>
+                  )}
                   <span className="field-label">{field.label}</span>
-                  <span className="field-value">
+                  <span className="field-value" style={{ 
+                    fontSize: getSizeStyle(field.size || 'medium'),
+                  }}>
                     {realTimeValues[field.id] !== undefined ? realTimeValues[field.id] : field.value}
                   </span>
                 </div>
@@ -305,12 +332,19 @@ const KPIModal: React.FC<KPIModalProps> = ({ isOpen, onClose, selectedData, onKP
     }
   };
 
-  // Update the handleCreateKPI function
+  const getSizeStyle = (size: string): string => {
+    switch (size) {
+      case 'small': return '0.875rem';
+      case 'large': return '1.5rem';
+      default: return '1.125rem'; // medium
+    }
+  };
+
+  // Update the handleCreateKPI function with fixed icon content logic
   const handleCreateKPI = () => {
     const widgetId = `kpi-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-    console.log('Creating KPI widget with fields:', kpiFields); // Debug log
-
+    // Create a simplified version of the widget content
     const kpiContent = `
       <div class="kpi-widget kpi-${selectedKPIType}" style="background-color: ${selectedColor};" id="${widgetId}">
         <h3 class="kpi-title">${kpiTitle || 'Vehicle Statistics'}</h3>
@@ -319,7 +353,12 @@ const KPIModal: React.FC<KPIModalProps> = ({ isOpen, onClose, selectedData, onKP
             const collection = field.collection || selectedData[0]?.vehicleType;
             const videoSource = field.videoSource || selectedData[0]?.filteredStats?.VideoSource;
             
-            console.log('Field data:', { collection, videoSource, field }); // Debug log
+            // Fix the icon content logic
+            const iconContent = field.customIcon 
+              ? (typeof field.customIcon === 'string' 
+                  ? field.customIcon 
+                  : `<span class="material-icon">${field.icon}</span>`)
+              : '';
 
             return `
               <div 
@@ -328,12 +367,19 @@ const KPIModal: React.FC<KPIModalProps> = ({ isOpen, onClose, selectedData, onKP
                 data-type="${field.label}"
                 data-collection="${collection}"
                 data-video-source="${videoSource}"
+                style="
+                  color: ${field.color};
+                  font-size: ${getSizeStyle(field.size || 'medium')};
+                "
               >
+                ${iconContent ? `<div class="field-icon">${iconContent}</div>` : ''}
                 <div class="field-label">${field.label}</div>
-                <div class="field-value" style="color: ${field.color};">
+                <div class="field-value" style="
+                  color: ${field.color};
+                  font-size: ${getSizeStyle(field.size || 'medium')};
+                ">
                   ${field.value}
                 </div>
-                ${field.icon ? `<div class="field-icon">${field.icon}</div>` : ''}
               </div>
             `;
           }).join('')}
@@ -341,8 +387,7 @@ const KPIModal: React.FC<KPIModalProps> = ({ isOpen, onClose, selectedData, onKP
       </div>
     `;
 
-    console.log('Generated KPI content:', kpiContent); // Debug log
-
+    // Create the widget object with serializable data
     const newWidget = {
       type: 'kpi' as const,
       id: widgetId,
@@ -352,11 +397,16 @@ const KPIModal: React.FC<KPIModalProps> = ({ isOpen, onClose, selectedData, onKP
       fields: kpiFields.map(field => ({
         ...field,
         collection: field.collection || selectedData[0]?.vehicleType,
-        videoSource: field.videoSource || selectedData[0]?.filteredStats?.VideoSource
+        videoSource: field.videoSource || selectedData[0]?.filteredStats?.VideoSource,
+        // Convert React node to string representation
+        customIcon: field.customIcon ? 
+          typeof field.customIcon === 'string' ? 
+            field.customIcon : 
+            field.icon
+          : undefined
       }))
     };
 
-    console.log('Adding new widget:', newWidget); // Debug log
     addWidget(newWidget);
     onClose();
     onKPICreated?.();
@@ -428,6 +478,73 @@ const KPIModal: React.FC<KPIModalProps> = ({ isOpen, onClose, selectedData, onKP
     })));
   };
 
+  const iconOptions = [
+    { category: 'Analytics', icons: [
+      { icon: <Dashboard />, name: 'Dashboard' },
+      { icon: <TrendingUp />, name: 'Trending' },
+      { icon: <Assessment />, name: 'Assessment' },
+      { icon: <Analytics />, name: 'Analytics' },
+      { icon: <Insights />, name: 'Insights' }
+    ]},
+    { category: 'Charts', icons: [
+      { icon: <PieChart />, name: 'Pie Chart' },
+      { icon: <BarChart />, name: 'Bar Chart' },
+      { icon: <ShowChart />, name: 'Line Chart' },
+      { icon: <BubbleChart />, name: 'Bubble Chart' },
+      { icon: <DonutLarge />, name: 'Donut Chart' }
+    ]},
+    { category: 'Time', icons: [
+      { icon: <Speed />, name: 'Speed' },
+      { icon: <Timer />, name: 'Timer' },
+      { icon: <AccessTime />, name: 'Clock' },
+      { icon: <CalendarToday />, name: 'Calendar' },
+      { icon: <Event />, name: 'Event' }
+    ]},
+    { category: 'People', icons: [
+      { icon: <Person />, name: 'Person' },
+      { icon: <Group />, name: 'Group' },
+      { icon: <Groups />, name: 'Groups' },
+      { icon: <Business />, name: 'Business' },
+      { icon: <Store />, name: 'Store' }
+    ]},
+    { category: 'Transport', icons: [
+      { icon: <LocalShipping />, name: 'Shipping' },
+      { icon: <DirectionsCar />, name: 'Car' },
+      { icon: <FlightTakeoff />, name: 'Flight' },
+      { icon: <Train />, name: 'Train' }
+    ]},
+    { category: 'Status', icons: [
+      { icon: <Security />, name: 'Security' },
+      { icon: <Shield />, name: 'Shield' },
+      { icon: <Gavel />, name: 'Rules' },
+      { icon: <VerifiedUser />, name: 'Verified' }
+    ]},
+    { category: 'Alerts', icons: [
+      { icon: <Notifications />, name: 'Notification' },
+      { icon: <Warning />, name: 'Warning' },
+      { icon: <Error />, name: 'Error' },
+      { icon: <CheckCircle />, name: 'Success' }
+    ]}
+  ];
+
+  const handleColorSelect = (color: string) => {
+    setSelectedColor(color);
+    
+    // Add active class to trigger rotation animation
+    const wheel = document.querySelector('.color-wheel');
+    const centerCircle = document.querySelector('.center-circle');
+    
+    if (wheel && centerCircle) {
+      wheel.classList.add('active');
+      centerCircle.classList.add('active');
+      
+      setTimeout(() => {
+        wheel.classList.remove('active');
+        centerCircle.classList.remove('active');
+      }, 1000);
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -472,12 +589,6 @@ const KPIModal: React.FC<KPIModalProps> = ({ isOpen, onClose, selectedData, onKP
           <div className="config-section field-config">
             <div className="section-header">
               <h3>Configure Fields</h3>
-              <div className="field-actions">
-                <button className="add-field-button" onClick={handleAddField}>
-                  <span className="icon">+</span>
-                  Add Field
-                </button>
-              </div>
             </div>
 
             {/* Data Selection Flow */}
@@ -630,10 +741,60 @@ const KPIModal: React.FC<KPIModalProps> = ({ isOpen, onClose, selectedData, onKP
                               </div>
                             </div>
 
-                            <div className="style-group">
+                            <div className="style-group icon-selection">
                               <label>Icon</label>
                               <div className="icon-selector">
-                                {/* Add icon selection */}
+                                {iconOptions.map((category) => (
+                                  <div key={category.category} className="icon-category-section">
+                                    {category.icons.map((iconOption) => (
+                                      <button
+                                        key={iconOption.name}
+                                        className={`icon-option ${field.icon === iconOption.name ? 'selected' : ''}`}
+                                        onClick={() => handleFieldUpdate(field.id, { 
+                                          icon: iconOption.name,
+                                          customIcon: iconOption.icon 
+                                        })}
+                                        title={iconOption.name}
+                                      >
+                                        {iconOption.icon}
+                                      </button>
+                                    ))}
+                                  </div>
+                                ))}
+                              </div>
+                              <div className="custom-icon-upload">
+                                <button 
+                                  className="custom-icon-button"
+                                  onClick={() => {
+                                    const input = document.createElement('input');
+                                    input.type = 'file';
+                                    input.accept = 'image/svg+xml,image/png';
+                                    input.onchange = (e) => {
+                                      const file = (e.target as HTMLInputElement).files?.[0];
+                                      if (file) {
+                                        const reader = new FileReader();
+                                        reader.onload = (e) => {
+                                          const result = e.target?.result;
+                                          if (typeof result === 'string') {
+                                            handleFieldUpdate(field.id, { 
+                                              icon: 'custom',
+                                              customIcon: <img src={result} alt="Custom icon" style={{ width: '20px', height: '20px' }} />
+                                            });
+                                          }
+                                        };
+                                        reader.readAsDataURL(file);
+                                      }
+                                    };
+                                    input.click();
+                                  }}
+                                >
+                                  Upload Custom Icon
+                                </button>
+                                {field.icon === 'custom' && field.customIcon && (
+                                  <div className="custom-icon-preview">
+                                    {field.customIcon}
+                                  </div>
+                                )}
                               </div>
                             </div>
                           </div>
@@ -654,17 +815,27 @@ const KPIModal: React.FC<KPIModalProps> = ({ isOpen, onClose, selectedData, onKP
           </div>
 
           {/* Color Selection */}
-          <div className="config-section">
+          <div className="color-selection-section">
             <h3>Background Color</h3>
-            <div className="color-options">
-              {colorOptions.map(color => (
-                <button
-                  key={color.value}
-                  className={`color-option ${selectedColor === color.value ? 'selected' : ''}`}
-                  style={{ backgroundColor: color.value }}
-                  onClick={() => setSelectedColor(color.value)}
-                  title={color.label}
-                />
+            <div className="color-cards">
+              {colorOptions.map((card) => (
+                <div key={card.mainColor} className="color-card">
+                  <div
+                    className="main-color"
+                    style={{ background: card.mainColor }}
+                    onClick={() => setSelectedColor(card.mainColor)}
+                  />
+                  <div className="color-shades">
+                    {card.shades.map((shade, index) => (
+                      <div
+                        key={index}
+                        className="shade"
+                        style={{ background: shade }}
+                        onClick={() => setSelectedColor(shade)}
+                      />
+                    ))}
+                  </div>
+                </div>
               ))}
             </div>
           </div>
