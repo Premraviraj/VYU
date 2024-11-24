@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { VehicleStats } from '../../../data/vehicleData';
 import { useWidgets } from '../../../context/WidgetContext';
 import './KPIModal.css';
 import { API_URL } from '../../../utils/config';
 import {
-  Dashboard, TrendingUp, Assessment, Timeline, PieChart, BarChart,
+  Dashboard, TrendingUp, Assessment,
+  PieChart, BarChart,
   ShowChart, BubbleChart, DonutLarge, Insights, Analytics, 
   Speed, Timer, AccessTime, CalendarToday, Event,
   Person, Group, Groups, Business, Store,
@@ -12,6 +13,7 @@ import {
   Security, Shield, Gavel, VerifiedUser,
   Notifications, Warning, Error, CheckCircle
 } from '@mui/icons-material';
+import ReactDOMServer from 'react-dom/server';
 
 interface KPIModalProps {
   isOpen: boolean;
@@ -42,22 +44,6 @@ interface CollectionData {
   };
 }
 
-interface FieldStyle {
-  fontSize: string;
-  fontWeight: string;
-  textTransform?: 'none' | 'capitalize' | 'uppercase' | 'lowercase';
-  icon?: string;
-  animation?: string;
-}
-
-interface FieldTheme {
-  name: string;
-  background: string;
-  textColor: string;
-  accentColor: string;
-  style: FieldStyle;
-}
-
 const KPIModal: React.FC<KPIModalProps> = ({ isOpen, onClose, selectedData, onKPICreated }) => {
   const [kpiTitle, setKpiTitle] = useState('');
   const [selectedColor, setSelectedColor] = useState('#ffffff');
@@ -69,8 +55,8 @@ const KPIModal: React.FC<KPIModalProps> = ({ isOpen, onClose, selectedData, onKP
   const [availableVideoSources, setAvailableVideoSources] = useState<string[]>([]);
   const [selectedVideoSource, setSelectedVideoSource] = useState<string>('1');
   const [availableFields, setAvailableFields] = useState<{[key: string]: number}>({});
-  const [showTemplates, setShowTemplates] = useState<boolean>(false);
   const [realTimeValues, setRealTimeValues] = useState<{[key: string]: number}>({});
+  const [graphTitle, setGraphTitle] = useState('');
 
   // Initialize available fields from selectedData
   React.useEffect(() => {
@@ -126,6 +112,16 @@ const KPIModal: React.FC<KPIModalProps> = ({ isOpen, onClose, selectedData, onKP
   ];
 
   const kpiTypes = [
+    { 
+      type: 'material-elevated', 
+      label: 'Material Elevated', 
+      description: 'Clean, elevated material design' 
+    },
+    { 
+      type: 'material-filled', 
+      label: 'Material Filled', 
+      description: 'Bold, filled material design' 
+    },
     { type: 'modern', label: 'Modern Design', description: 'Clean and modern look' },
     { type: 'compact', label: 'Compact View', description: 'Space-efficient design' },
     { type: 'detailed', label: 'Detailed Stats', description: 'Comprehensive view' },
@@ -153,44 +149,6 @@ const KPIModal: React.FC<KPIModalProps> = ({ isOpen, onClose, selectedData, onKP
       mainColor: '#E0B5FF', // Light Purple
       shades: ['#EBD1FF', '#F2E3FF', '#F7F0FF']
     }
-  ];
-
-  const fieldThemes: FieldTheme[] = [
-    {
-      name: 'Modern',
-      background: 'linear-gradient(145deg, #ffffff, #f3f4f6)',
-      textColor: '#1e293b',
-      accentColor: '#4f46e5',
-      style: {
-        fontSize: '1.5rem',
-        fontWeight: '600',
-        animation: 'fadeInUp'
-      }
-    },
-    {
-      name: 'Neon',
-      background: '#1a1a1a',
-      textColor: '#ffffff',
-      accentColor: '#00ff88',
-      style: {
-        fontSize: '1.8rem',
-        fontWeight: '700',
-        textTransform: 'uppercase',
-        animation: 'glowPulse'
-      }
-    },
-    {
-      name: 'Minimal',
-      background: '#ffffff',
-      textColor: '#374151',
-      accentColor: '#6b7280',
-      style: {
-        fontSize: '1.2rem',
-        fontWeight: '500',
-        animation: 'slideIn'
-      }
-    },
-    // Add more themes...
   ];
 
   const fetchFieldData = async (field: KPIField) => {
@@ -238,6 +196,60 @@ const KPIModal: React.FC<KPIModalProps> = ({ isOpen, onClose, selectedData, onKP
 
   const getPreviewContent = () => {
     switch (selectedKPIType) {
+      case 'material-elevated':
+        return (
+          <div className="kpi-preview-material-elevated" style={{ background: selectedColor }}>
+            <div className="kpi-header">
+              <h3 className="kpi-title">{kpiTitle || 'KPI Title'}</h3>
+            </div>
+            <div className="kpi-fields">
+              {kpiFields.map((field) => (
+                <div 
+                  key={field.id} 
+                  className="kpi-field elevation-1"
+                >
+                  {field.customIcon && (
+                    <div className="field-icon">
+                      {field.customIcon}
+                    </div>
+                  )}
+                  <span className="field-label">{field.label}</span>
+                  <span className="field-value">
+                    {realTimeValues[field.id] !== undefined ? realTimeValues[field.id] : field.value}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+
+      case 'material-filled':
+        return (
+          <div className="kpi-preview-material-filled" style={{ background: selectedColor }}>
+            <div className="kpi-header">
+              <h3 className="kpi-title">{kpiTitle || 'KPI Title'}</h3>
+            </div>
+            <div className="kpi-fields">
+              {kpiFields.map((field) => (
+                <div 
+                  key={field.id} 
+                  className="kpi-field"
+                >
+                  {field.customIcon && (
+                    <div className="field-icon">
+                      {field.customIcon}
+                    </div>
+                  )}
+                  <span className="field-label">{field.label}</span>
+                  <span className="field-value">
+                    {realTimeValues[field.id] !== undefined ? realTimeValues[field.id] : field.value}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+
       case 'modern':
         return (
           <div className="kpi-preview-modern" style={{ background: selectedColor }}>
@@ -344,40 +356,40 @@ const KPIModal: React.FC<KPIModalProps> = ({ isOpen, onClose, selectedData, onKP
   const handleCreateKPI = () => {
     const widgetId = `kpi-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-    // Create a simplified version of the widget content
+    // Create widget content with icon support
     const kpiContent = `
       <div class="kpi-widget kpi-${selectedKPIType}" style="background-color: ${selectedColor};" id="${widgetId}">
-        <h3 class="kpi-title">${kpiTitle || 'Vehicle Statistics'}</h3>
-        <div class="kpi-fields ${selectedKPIType}-fields">
+        <div class="kpi-header">
+          <h3 class="kpi-title">${kpiTitle || 'Vehicle Statistics'}</h3>
+        </div>
+        <div class="kpi-fields">
           ${kpiFields.map(field => {
             const collection = field.collection || selectedData[0]?.vehicleType;
             const videoSource = field.videoSource || selectedData[0]?.filteredStats?.VideoSource;
             
-            // Fix the icon content logic
+            // Convert React icon component to SVG string
             const iconContent = field.customIcon 
-              ? (typeof field.customIcon === 'string' 
-                  ? field.customIcon 
-                  : `<span class="material-icon">${field.icon}</span>`)
+              ? (React.isValidElement(field.customIcon) 
+                  ? ReactDOMServer.renderToString(field.customIcon)
+                  : field.customIcon)
               : '';
 
             return `
               <div 
-                class="kpi-field ${selectedKPIType}-field" 
+                class="kpi-field ${selectedKPIType === 'material-elevated' ? 'elevation-1' : ''}" 
                 data-field-id="${field.id}"
                 data-type="${field.label}"
                 data-collection="${collection}"
                 data-video-source="${videoSource}"
-                style="
-                  color: ${field.color};
-                  font-size: ${getSizeStyle(field.size || 'medium')};
-                "
+                style="color: ${field.color};"
               >
-                ${iconContent ? `<div class="field-icon">${iconContent}</div>` : ''}
+                ${iconContent ? `
+                  <div class="field-icon">
+                    ${iconContent}
+                  </div>
+                ` : ''}
                 <div class="field-label">${field.label}</div>
-                <div class="field-value" style="
-                  color: ${field.color};
-                  font-size: ${getSizeStyle(field.size || 'medium')};
-                ">
+                <div class="field-value">
                   ${field.value}
                 </div>
               </div>
@@ -387,7 +399,7 @@ const KPIModal: React.FC<KPIModalProps> = ({ isOpen, onClose, selectedData, onKP
       </div>
     `;
 
-    // Create the widget object with serializable data
+    // Create the widget object with icon data
     const newWidget = {
       type: 'kpi' as const,
       id: widgetId,
@@ -398,11 +410,12 @@ const KPIModal: React.FC<KPIModalProps> = ({ isOpen, onClose, selectedData, onKP
         ...field,
         collection: field.collection || selectedData[0]?.vehicleType,
         videoSource: field.videoSource || selectedData[0]?.filteredStats?.VideoSource,
-        // Convert React node to string representation
+        // Preserve icon information
+        icon: field.icon,
         customIcon: field.customIcon ? 
-          typeof field.customIcon === 'string' ? 
-            field.customIcon : 
-            field.icon
+          React.isValidElement(field.customIcon) ?
+            ReactDOMServer.renderToString(field.customIcon) :
+            field.customIcon
           : undefined
       }))
     };
@@ -466,16 +479,6 @@ const KPIModal: React.FC<KPIModalProps> = ({ isOpen, onClose, selectedData, onKP
         ? { ...field, showAdvanced: !field.showAdvanced || false }
         : field
     ));
-  };
-
-  const applyThemeToFields = (theme: FieldTheme) => {
-    setKpiFields(prev => prev.map(field => ({
-      ...field,
-      color: theme.accentColor,
-      fontSize: theme.style.fontSize,
-      fontWeight: theme.style.fontWeight,
-      textTransform: theme.style.textTransform
-    })));
   };
 
   const iconOptions = [

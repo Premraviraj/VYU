@@ -427,17 +427,14 @@
 }
 
 .kpi-field {
-  background: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(8px);
-  border-radius: 16px;
-  padding: 1.5rem;
-  text-align: center;
-  transition: all 0.3s ease;
   position: relative;
-  overflow: hidden;
-  box-shadow: 
-    0 4px 6px rgba(0, 0, 0, 0.05),
-    0 0 0 1px rgba(255, 255, 255, 0.7);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px;
+  background: white;
+  border-radius: 16px;
+  transition: all 0.3s ease;
 }
 
 .kpi-field:hover {
@@ -448,19 +445,18 @@
 }
 
 .field-label {
-  font-size: 0.9rem;
-  font-weight: 600;
+  font-size: 1.25rem;
+  color: #64748b;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-bottom: 0.75rem;
-  opacity: 0.8;
+  letter-spacing: 1px;
+  font-weight: 600;
+  margin: 12px 0;
 }
 
 .field-value {
   font-size: 2.5rem;
   font-weight: 700;
-  line-height: 1;
-  margin-bottom: 0.5rem;
+  color: #1e293b;
 }
 
 /* Minimal KPI Card Styles */
@@ -1088,44 +1084,315 @@
 
 /* Field Icon Styles */
 .field-icon {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  margin-bottom: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 0.5rem;
-}
-
-.field-icon svg {
-  width: 24px;
-  height: 24px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(79, 70, 229, 0.1), rgba(99, 102, 241, 0.1));
   transition: all 0.3s ease;
 }
 
-/* Size-based styles */
-.kpi-field[data-size="small"] {
-  font-size: 0.875rem;
+.field-icon svg {
+  width: 36px;
+  height: 36px;
+  color: #4f46e5;
+  transition: all 0.3s ease;
 }
 
-.kpi-field[data-size="small"] .field-icon svg {
-  width: 20px;
-  height: 20px;
+/* Icon hover effects */
+.kpi-field:hover .field-icon {
+  transform: translateY(-5px);
+  background: linear-gradient(135deg, rgba(79, 70, 229, 0.2), rgba(99, 102, 241, 0.2));
+  box-shadow: 
+    0 10px 20px rgba(79, 70, 229, 0.1),
+    0 6px 6px rgba(79, 70, 229, 0.1);
 }
 
-.kpi-field[data-size="medium"] {
-  font-size: 1.125rem;
+.kpi-field:hover .field-icon svg {
+  transform: scale(1.1);
+  color: #6366f1;
 }
 
-.kpi-field[data-size="medium"] .field-icon svg {
-  width: 24px;
-  height: 24px;
+/* Glow effect behind icon */
+.field-icon::after {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #4f46e5, #6366f1);
+  opacity: 0;
+  filter: blur(15px);
+  transition: all 0.3s ease;
+  z-index: -1;
 }
 
-.kpi-field[data-size="large"] {
-  font-size: 1.5rem;
+.kpi-field:hover .field-icon::after {
+  opacity: 0.3;
 }
 
-.kpi-field[data-size="large"] .field-icon svg {
-  width: 32px;
-  height: 32px;
+/* Value and label styles */
+.field-value {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 12px 0;
 }
 
-/* Keep other existing styles ... */ 
+.field-label {
+  font-size: 1.25rem;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: 600;
+}
+
+/* Pulse animation for real-time updates */
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(79, 70, 229, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(79, 70, 229, 0);
+  }
+}
+
+.field-icon.updating {
+  animation: pulse 2s infinite;
+}
+
+/* Different styles for different types of metrics */
+.kpi-field[data-type="Entry"] .field-icon {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(5, 150, 105, 0.1));
+}
+
+.kpi-field[data-type="Entry"] .field-icon svg {
+  color: #059669;
+}
+
+.kpi-field[data-type="Exit"] .field-icon {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(220, 38, 38, 0.1));
+}
+
+.kpi-field[data-type="Exit"] .field-icon svg {
+  color: #dc2626;
+}
+
+/* Keep other existing styles ... */
+
+/* Material Design Card Styles */
+
+/* Material Elevated Card */
+.kpi-preview-material-elevated {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+  transition: all 0.3s cubic-bezier(.25,.8,.25,1);
+  position: relative;
+  overflow: hidden;
+}
+
+.kpi-preview-material-elevated:hover {
+  box-shadow: 0 14px 28px rgba(0,0,0,0.25), 0 10px 10px rgba(0,0,0,0.22);
+}
+
+.kpi-preview-material-elevated .kpi-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(0,0,0,0.12);
+}
+
+.kpi-preview-material-elevated .kpi-title {
+  font-size: 20px;
+  font-weight: 500;
+  color: rgba(0,0,0,0.87);
+  margin: 0;
+}
+
+.kpi-preview-material-elevated .kpi-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 16px;
+}
+
+.kpi-preview-material-elevated .kpi-field {
+  background: #f5f5f5;
+  padding: 16px;
+  border-radius: 8px;
+  transition: transform 0.2s ease;
+}
+
+.kpi-preview-material-elevated .kpi-field:hover {
+  transform: translateY(-2px);
+  background: #eeeeee;
+}
+
+.kpi-preview-material-elevated .field-label {
+  font-size: 14px;
+  color: rgba(0,0,0,0.6);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.kpi-preview-material-elevated .field-value {
+  font-size: 24px;
+  font-weight: 500;
+  color: rgba(0,0,0,0.87);
+}
+
+/* Material Filled Card */
+.kpi-preview-material-filled {
+  background: #6200ee;  /* Primary color */
+  color: white;
+  border-radius: 16px;
+  padding: 24px;
+  position: relative;
+  overflow: hidden;
+}
+
+.kpi-preview-material-filled::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(45deg, rgba(255,255,255,0.1), transparent);
+}
+
+.kpi-preview-material-filled .kpi-header {
+  position: relative;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.2);
+}
+
+.kpi-preview-material-filled .kpi-title {
+  font-size: 20px;
+  font-weight: 500;
+  color: white;
+  margin: 0;
+}
+
+.kpi-preview-material-filled .kpi-fields {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 16px;
+}
+
+.kpi-preview-material-filled .kpi-field {
+  background: rgba(255,255,255,0.1);
+  padding: 16px;
+  border-radius: 8px;
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+}
+
+.kpi-preview-material-filled .kpi-field:hover {
+  background: rgba(255,255,255,0.15);
+  transform: translateY(-2px);
+}
+
+.kpi-preview-material-filled .field-label {
+  font-size: 14px;
+  color: rgba(255,255,255,0.7);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.kpi-preview-material-filled .field-value {
+  font-size: 24px;
+  font-weight: 500;
+  color: white;
+}
+
+/* Material Design Ripple Effect */
+.kpi-field {
+  position: relative;
+  overflow: hidden;
+}
+
+.kpi-field::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 5px;
+  height: 5px;
+  background: rgba(255,255,255,.5);
+  opacity: 0;
+  border-radius: 100%;
+  transform: scale(1, 1) translate(-50%);
+  transform-origin: 50% 50%;
+}
+
+.kpi-field:focus:not(:active)::after {
+  animation: ripple 1s ease-out;
+}
+
+@keyframes ripple {
+  0% {
+    transform: scale(0, 0);
+    opacity: 0.5;
+  }
+  20% {
+    transform: scale(25, 25);
+    opacity: 0.3;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(40, 40);
+  }
+}
+
+/* Material Design Transitions */
+.kpi-field {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Material Design Elevation Levels */
+.elevation-1 { box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24); }
+.elevation-2 { box-shadow: 0 3px 6px rgba(0,0,0,0.16), 0 3px 6px rgba(0,0,0,0.23); }
+.elevation-3 { box-shadow: 0 10px 20px rgba(0,0,0,0.19), 0 6px 6px rgba(0,0,0,0.23); }
+.elevation-4 { box-shadow: 0 14px 28px rgba(0,0,0,0.25), 0 10px 10px rgba(0,0,0,0.22); }
+.elevation-5 { box-shadow: 0 19px 38px rgba(0,0,0,0.30), 0 15px 12px rgba(0,0,0,0.22); }
+
+/* Material Design States */
+.kpi-field:hover { transform: translateY(-2px); }
+.kpi-field:active { transform: translateY(1px); }
+.kpi-field:focus { outline: none; }
+
+/* Material Design Typography */
+.kpi-title {
+  font-family: 'Roboto', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  font-weight: 500;
+  letter-spacing: 0.0125em;
+}
+
+.field-label {
+  font-family: 'Roboto', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  font-weight: 400;
+  letter-spacing: 0.0178571429em;
+}
+
+.field-value {
+  font-family: 'Roboto', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  font-weight: 500;
+  letter-spacing: 0.0089285714em;
+} 

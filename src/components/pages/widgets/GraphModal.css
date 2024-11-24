@@ -438,33 +438,49 @@
 
 .fields-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-  gap: 1rem;
-  padding: 1rem;
-  background: rgba(79, 70, 229, 0.02);
-  border-radius: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px;
+  margin-top: 10px;
 }
 
 .field-item {
   background: white;
-  padding: 1rem;
-  border-radius: 10px;
-  border: 1px solid rgba(226, 232, 240, 0.8);
-  transition: all 0.2s ease;
-  text-align: center;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 10px;
   cursor: pointer;
-}
-
-.field-item:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(79, 70, 229, 0.1);
+  transition: all 0.2s ease;
 }
 
 .field-item.selected {
-  background: linear-gradient(135deg, #4f46e5, #6366f1);
+  background: #f3f4f6;
+  border-color: #6366f1;
+}
+
+.field-name {
+  font-weight: 500;
+  color: #374151;
+}
+
+.field-count {
+  font-size: 0.875rem;
+  color: #6b7280;
+  margin-top: 4px;
+}
+
+.selection-button, .source-button {
+  padding: 8px 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.selection-button.selected, .source-button.selected {
+  background: #6366f1;
   color: white;
-  border: none;
-  box-shadow: 0 4px 8px rgba(79, 70, 229, 0.2);
+  border-color: #4f46e5;
 }
 
 /* Keep other existing styles ... */ 

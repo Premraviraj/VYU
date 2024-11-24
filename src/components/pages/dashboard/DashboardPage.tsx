@@ -1,374 +1,285 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useWidgets } from '../../../context/WidgetContext';
+import { Widget, GraphType, isGraphWidget } from '../../../types/Widget';
+import { ColorState } from '../../../context/GraphContext';
 import './DashboardPage.css';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import { Responsive, WidthProvider } from 'react-grid-layout';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
-import { toast, ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
 import {
-  BarChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, Bar,
-  LineChart, Line, PieChart, Pie, Cell, ScatterChart, Scatter,
-  ComposedChart, RadialBarChart, RadialBar
+  BarChart, LineChart, 
+  Bar, Line, 
+  XAxis, YAxis, CartesianGrid, Tooltip, Legend,
+  ResponsiveContainer
 } from 'recharts';
-import { ResponsiveContainer } from 'recharts';
-
-type IconType = 'circle' | 'plainline' | 'square' | 'rect' | 'cross' | 'diamond' | 'star' | 'triangle' | 'wye';
 
 const ResponsiveGridLayout = WidthProvider(Responsive);
+
+const MIN_WIDTH = 372;
+const MIN_HEIGHT = 250;
+const INITIAL_WIDTH = 372;
+const INITIAL_HEIGHT = 250;
 
 const DashboardPage: React.FC = () => {
   const { widgets, removeWidget } = useWidgets();
   const [layouts, setLayouts] = useState({});
 
+  const handleRemoveWidget = (id: string) => {
+    removeWidget(id);
+    toast.success('Widget deleted successfully!', {
+      position: "top-right",
+      autoClose: 2000
+    });
+  };
+
+  // Default layout configuration with specific dimensions
   const defaultLayout = widgets.map((widget, index) => ({
     i: widget.id,
     x: (index % 3) * 4,
     y: Math.floor(index / 3) * 4,
-    w: 4,
-    h: 4,
-    minW: 2,
-    minH: 3
+    w: Math.ceil(INITIAL_WIDTH / 100),
+    h: Math.ceil(INITIAL_HEIGHT / 100),
+    minW: Math.ceil(MIN_WIDTH / 100),
+    minH: Math.ceil(MIN_HEIGHT / 100),
+    maxW: 12,
+    maxH: 8
   }));
 
-  const handleLayoutChange = (layout: any, layouts: any) => {
-    setLayouts(layouts);
-  };
+  const handleResize = (layout: any, oldItem: any, newItem: any) => {
+    const newWidth = newItem.w * 100;
+    const newHeight = newItem.h * 100;
 
-  const handleRemoveWidget = (id: string) => {
-    const toastId = toast.info(
-      <div>
-        <p style={{ marginBottom: '10px' }}>Are you sure you want to delete this widget?</p>
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-          <button
-            onClick={() => {
-              removeWidget(id);
-              toast.dismiss(toastId);
-              toast.success('Widget deleted successfully!', {
-                position: "top-right",
-                autoClose: 2000
-              });
-            }}
-            style={{
-              background: '#ef4444',
-              color: 'white',
-              border: 'none',
-              padding: '6px 12px',
-              borderRadius: '4px',
-              cursor: 'pointer'
-            }}
-          >
-            Delete
-          </button>
-          <button
-            onClick={() => toast.dismiss(toastId)}
-            style={{
-              background: '#64748b',
-              color: 'white',
-              border: 'none',
-              padding: '6px 12px',
-              borderRadius: '4px',
-              cursor: 'pointer'
-            }}
-          >
-            Cancel
-          </button>
-        </div>
-      </div>,
-      {
+    if (newWidth < MIN_WIDTH || newHeight < MIN_HEIGHT) {
+      toast.warn(`Cannot resize below minimum dimensions (${MIN_WIDTH}px × ${MIN_HEIGHT}px)`, {
         position: "top-center",
-        autoClose: false,
-        hideProgressBar: false,
-        closeOnClick: false,
-        pauseOnHover: true,
-        draggable: false,
-        closeButton: false
+        autoClose: 2000,
+      });
+      return false;
+    }
+
+    // Update the content size when resizing
+    const widgetElement = document.querySelector(`[data-grid-id="${newItem.i}"]`);
+    if (widgetElement) {
+      const contentElement = widgetElement.querySelector('.widget-content');
+      if (contentElement) {
+        (contentElement as HTMLElement).style.width = `${newWidth}px`;
+        (contentElement as HTMLElement).style.height = `${newHeight - 50}px`; // Subtract header height
       }
-    );
+    }
+    return true;
   };
 
-  const renderGraph = (widget: any) => {
-    const { type, selectedData, colors } = widget.data;
+  const renderWidget = (widget: Widget) => {
+    switch (widget.type) {
+      case 'graph':
+        return (
+          <div className="widget-content">
+            <div className="widget-header">
+              <h3>{widget.title}</h3>
+            </div>
+            <div className="widget-body">
+              {widget.chartProps ? generateChartComponent(
+                widget.chartProps.type,
+                widget.chartProps.data,
+                widget.chartProps.colors
+              ) : (
+                <div>No chart data available</div>
+              )}
+            </div>
+          </div>
+        );
+      // ... other widget types
+      default:
+        return null;
+    }
+  };
 
-    // Common chart configurations
+  // Add this helper function to generate charts
+  const generateChartComponent = (type: GraphType, data: any[], colors: ColorState) => {
     const commonProps = {
       margin: { top: 20, right: 30, left: 20, bottom: 20 },
       style: {
-        background: 'linear-gradient(165deg, rgba(255, 255, 255, 0.95), rgba(252, 253, 255, 0.9))',
-        borderRadius: '12px',
+        background: 'linear-gradient(145deg, rgba(255, 255, 255, 0.98), rgba(249, 250, 251, 0.95))',
+        borderRadius: '16px',
+        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.05), 0 8px 16px rgba(0, 0, 0, 0.05)',
+        padding: '15px',
+        filter: 'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1))'
       }
     };
 
-    // Enhanced CartesianGrid props
-    const gridProps = {
-      strokeDasharray: '3 3',
-      stroke: 'rgba(203, 213, 225, 0.4)',
-      vertical: true
-    };
-
-    // Enhanced Tooltip props
-    const tooltipProps = {
-      contentStyle: {
-        background: 'rgba(255, 255, 255, 0.98)',
-        border: '1px solid rgba(226, 232, 240, 0.8)',
-        borderRadius: '8px',
-        padding: '0.75rem',
-        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
-        backdropFilter: 'blur(8px)'
-      }
-    };
-
-    // Enhanced Legend props with dynamic positioning
-    const legendProps = {
+    const customLegendStyle = {
       wrapperStyle: {
-        padding: '0.5rem',
-        borderRadius: '8px',
-        background: 'rgba(255, 255, 255, 0.8)',
-        backdropFilter: 'blur(4px)'
-      } as React.CSSProperties,
-      iconSize: 10,
-      iconType: 'circle' as IconType,
-      layout: 'vertical' as const,
-      align: 'right' as const,
-      verticalAlign: 'middle' as const,
-      onMouseEnter: (e: any) => {
-        if (e.target) {
-          e.target.style.transform = 'translateX(-2px)';
-        }
+        paddingTop: '20px',
+        paddingBottom: '15px',
+        display: 'flex',
+        justifyContent: 'center',
+        gap: '12px',
+        flexWrap: 'wrap' as const
       },
-      onMouseLeave: (e: any) => {
-        if (e.target) {
-          e.target.style.transform = 'translateX(0)';
-        }
+      itemStyle: {
+        padding: '8px 16px',
+        background: 'rgba(255, 255, 255, 0.95)',
+        borderRadius: '30px',
+        border: '1px solid rgba(0, 0, 0, 0.05)',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        transition: 'all 0.3s ease',
+        cursor: 'pointer',
+        boxShadow: '0 2px 4px rgba(0, 0, 0, 0.05)',
+        fontSize: '0.875rem',
+        fontWeight: 500,
+        color: '#1e293b'
       }
     };
 
-    // Function to calculate legend position based on container size
-    const calculateLegendPosition = (containerWidth: number) => {
-      if (containerWidth < 400) {
-        return {
-          ...legendProps,
-          layout: 'horizontal' as const,
-          align: 'center' as const,
-          verticalAlign: 'bottom' as const,
-          wrapperStyle: {
-            ...legendProps.wrapperStyle,
-            marginTop: '1rem'
-          } as React.CSSProperties
-        };
+    const customTooltipStyle = {
+      contentStyle: {
+        backgroundColor: 'rgba(255, 255, 255, 0.98)',
+        borderRadius: '12px',
+        border: 'none',
+        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
+        padding: '12px 16px'
       }
-      return legendProps;
-    };
-
-    // Enhanced Axis props
-    const axisProps = {
-      tick: { fill: '#64748b', fontSize: 12 },
-      axisLine: { stroke: '#cbd5e1' },
-      tickLine: { stroke: '#cbd5e1' }
     };
 
     switch (type) {
-      case 'scatter':
+      case 'bar':
         return (
-          <ResponsiveContainer width="100%" height="100%">
-            <ScatterChart margin={commonProps.margin} style={commonProps.style}>
-              <CartesianGrid {...gridProps} />
-              <XAxis {...axisProps} dataKey="label" />
-              <YAxis {...axisProps} />
-              <Tooltip {...tooltipProps} cursor={{ strokeDasharray: '3 3' }} />
-              <Legend {...legendProps} />
-              <Scatter
-                name="Data Points"
-                data={selectedData}
-                fill="#4f46e5"
-                stroke="#ffffff"
-                strokeWidth={1}
-                r={6}
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={data} {...commonProps}>
+              <defs>
+                <linearGradient id="entryGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#10B981" stopOpacity={0.8}/>
+                  <stop offset="95%" stopColor="#059669" stopOpacity={0.4}/>
+                </linearGradient>
+                <linearGradient id="exitGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#EF4444" stopOpacity={0.8}/>
+                  <stop offset="95%" stopColor="#DC2626" stopOpacity={0.4}/>
+                </linearGradient>
+                <linearGradient id="totalGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#6366F1" stopOpacity={0.8}/>
+                  <stop offset="95%" stopColor="#4F46E5" stopOpacity={0.4}/>
+                </linearGradient>
+                <filter id="shadow">
+                  <feDropShadow dx="0" dy="2" stdDeviation="3" floodOpacity="0.2"/>
+                </filter>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" opacity={0.5} />
+              <XAxis 
+                dataKey="label" 
+                tick={{ fill: '#4B5563', fontSize: 12 }}
+                axisLine={{ stroke: '#9CA3AF' }}
+                tickLine={{ stroke: '#9CA3AF' }}
               />
-            </ScatterChart>
-          </ResponsiveContainer>
-        );
-
-      case 'verticalBar':
-        return (
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart 
-              data={selectedData} 
-              margin={commonProps.margin} 
-              style={commonProps.style}
-            >
-              <CartesianGrid {...gridProps} />
-              <XAxis {...axisProps} dataKey="label" />
-              <YAxis {...axisProps} />
-              <Tooltip {...tooltipProps} />
-              <Legend {...calculateLegendPosition(window.innerWidth)} />
+              <YAxis 
+                tick={{ fill: '#4B5563', fontSize: 12 }}
+                axisLine={{ stroke: '#9CA3AF' }}
+                tickLine={{ stroke: '#9CA3AF' }}
+              />
+              <Tooltip {...customTooltipStyle} />
+              <Legend {...customLegendStyle} />
               <Bar 
                 dataKey="Entry" 
-                fill="#059669"
-                radius={[4, 4, 0, 0]}
+                fill="url(#entryGradient)"
+                radius={[6, 6, 0, 0]}
                 maxBarSize={50}
-                animationBegin={0}
                 animationDuration={1500}
+                animationEasing="ease-out"
+                filter="url(#shadow)"
               />
               <Bar 
                 dataKey="Exit" 
-                fill="#dc2626"
-                radius={[4, 4, 0, 0]}
+                fill="url(#exitGradient)"
+                radius={[6, 6, 0, 0]}
                 maxBarSize={50}
-                animationBegin={200}
                 animationDuration={1500}
+                animationEasing="ease-out"
+                filter="url(#shadow)"
               />
               <Bar 
                 dataKey="Total" 
-                fill="#4f46e5"
-                radius={[4, 4, 0, 0]}
+                fill="url(#totalGradient)"
+                radius={[6, 6, 0, 0]}
                 maxBarSize={50}
-                animationBegin={400}
                 animationDuration={1500}
+                animationEasing="ease-out"
+                filter="url(#shadow)"
               />
             </BarChart>
           </ResponsiveContainer>
         );
 
-      case 'pie':
+      case 'line':
         return (
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart margin={commonProps.margin} style={commonProps.style}>
-              <Pie
-                data={selectedData}
-                dataKey="value"
-                nameKey="label"
-                cx="50%"
-                cy="50%"
-                outerRadius="80%"
-                label
-              >
-                {selectedData.map((entry: any, index: number) => (
-                  <Cell 
-                    key={`cell-${index}`} 
-                    fill={colors?.[`vehicle-${index}`]?.total || '#4f46e5'} 
-                  />
-                ))}
-              </Pie>
-              <Tooltip {...tooltipProps} />
-              <Legend {...legendProps} />
-            </PieChart>
-          </ResponsiveContainer>
-        );
-
-      case 'simpleLine':
-        return (
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={selectedData} margin={commonProps.margin} style={commonProps.style}>
-              <CartesianGrid {...gridProps} />
-              <XAxis {...axisProps} dataKey="label" />
-              <YAxis {...axisProps} />
-              <Tooltip {...tooltipProps} />
-              <Legend {...legendProps} />
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={data} {...commonProps}>
+              <defs>
+                <linearGradient id="totalLineGradient" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="5%" stopColor="#6366F1"/>
+                  <stop offset="95%" stopColor="#4F46E5"/>
+                </linearGradient>
+                <linearGradient id="entryLineGradient" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="5%" stopColor="#10B981"/>
+                  <stop offset="95%" stopColor="#059669"/>
+                </linearGradient>
+                <linearGradient id="exitLineGradient" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="5%" stopColor="#EF4444"/>
+                  <stop offset="95%" stopColor="#DC2626"/>
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" opacity={0.5} />
+              <XAxis 
+                dataKey="label" 
+                tick={{ fill: '#4B5563', fontSize: 12 }}
+                axisLine={{ stroke: '#9CA3AF' }}
+              />
+              <YAxis 
+                tick={{ fill: '#4B5563', fontSize: 12 }}
+                axisLine={{ stroke: '#9CA3AF' }}
+              />
+              <Tooltip {...customTooltipStyle} />
+              <Legend {...customLegendStyle} />
               <Line 
                 type="monotone" 
                 dataKey="Total" 
-                stroke="#4f46e5"
-                strokeWidth={2}
-                dot={{ fill: '#ffffff', stroke: '#4f46e5', strokeWidth: 2, r: 4 }}
-                activeDot={{ r: 6, stroke: '#ffffff', strokeWidth: 2 }}
+                stroke="url(#totalLineGradient)"
+                strokeWidth={3}
+                dot={{ fill: '#ffffff', stroke: '#4F46E5', strokeWidth: 2, r: 6 }}
+                activeDot={{ r: 8, stroke: '#ffffff', strokeWidth: 2 }}
                 animationDuration={1500}
+                animationEasing="ease-out"
               />
               <Line 
                 type="monotone" 
                 dataKey="Entry" 
-                stroke="#059669"
-                strokeWidth={2}
-                dot={{ fill: '#ffffff', stroke: '#059669', strokeWidth: 2, r: 4 }}
-                activeDot={{ r: 6, stroke: '#ffffff', strokeWidth: 2 }}
+                stroke="url(#entryLineGradient)"
+                strokeWidth={3}
+                dot={{ fill: '#ffffff', stroke: '#059669', strokeWidth: 2, r: 6 }}
+                activeDot={{ r: 8, stroke: '#ffffff', strokeWidth: 2 }}
                 animationDuration={1500}
+                animationEasing="ease-out"
               />
               <Line 
                 type="monotone" 
                 dataKey="Exit" 
-                stroke="#dc2626"
-                strokeWidth={2}
-                dot={{ fill: '#ffffff', stroke: '#dc2626', strokeWidth: 2, r: 4 }}
-                activeDot={{ r: 6, stroke: '#ffffff', strokeWidth: 2 }}
+                stroke="url(#exitLineGradient)"
+                strokeWidth={3}
+                dot={{ fill: '#ffffff', stroke: '#DC2626', strokeWidth: 2, r: 6 }}
+                activeDot={{ r: 8, stroke: '#ffffff', strokeWidth: 2 }}
                 animationDuration={1500}
+                animationEasing="ease-out"
               />
             </LineChart>
           </ResponsiveContainer>
         );
 
-      case 'composed':
-        return (
-          <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={selectedData} margin={commonProps.margin} style={commonProps.style}>
-              <CartesianGrid {...gridProps} />
-              <XAxis {...axisProps} dataKey="label" />
-              <YAxis {...axisProps} />
-              <Tooltip {...tooltipProps} />
-              <Legend {...legendProps} />
-              <Bar 
-                dataKey="Total" 
-                fill="#4f46e5"
-                radius={[4, 4, 0, 0]}
-                maxBarSize={50}
-                animationBegin={0}
-                animationDuration={1500}
-              />
-              <Line 
-                type="monotone" 
-                dataKey="Entry" 
-                stroke="#059669"
-                strokeWidth={2}
-                dot={{ fill: '#ffffff', stroke: '#059669', strokeWidth: 2, r: 4 }}
-                activeDot={{ r: 6, stroke: '#ffffff', strokeWidth: 2 }}
-                animationDuration={1500}
-              />
-              <Line 
-                type="monotone" 
-                dataKey="Exit" 
-                stroke="#dc2626"
-                strokeWidth={2}
-                dot={{ fill: '#ffffff', stroke: '#dc2626', strokeWidth: 2, r: 4 }}
-                activeDot={{ r: 6, stroke: '#ffffff', strokeWidth: 2 }}
-                animationDuration={1500}
-              />
-            </ComposedChart>
-          </ResponsiveContainer>
-        );
-
-      // Add similar enhancements for other graph types...
-
       default:
-        console.warn(`Unsupported graph type: ${type}`);
-        return (
-          <div className="unsupported-graph">
-            <p>Graph type not supported: {type}</p>
-          </div>
-        );
+        return <div>Unsupported chart type</div>;
     }
   };
-
-  // Add resize observer to check minimum size
-  useEffect(() => {
-    const resizeObserver = new ResizeObserver(entries => {
-      entries.forEach(entry => {
-        const { width, height } = entry.contentRect;
-        const container = entry.target as HTMLElement;
-        
-        if (width < 400 || height < 250) {
-          container.classList.add('min-size');
-        } else {
-          container.classList.remove('min-size');
-        }
-      });
-    });
-
-    const widgets = document.querySelectorAll('.widget-container');
-    widgets.forEach(widget => resizeObserver.observe(widget));
-
-    return () => {
-      resizeObserver.disconnect();
-    };
-  }, []);
 
   return (
     <div className="dashboard-container">
@@ -381,69 +292,69 @@ const DashboardPage: React.FC = () => {
             className="layout"
             layouts={{ lg: defaultLayout }}
             breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
-            cols={{ lg: 12, md: 10, sm: 6, xs: 4, xxs: 2 }}
+            cols={{ lg: 12, md: 9, sm: 6, xs: 4, xxs: 2 }}
             rowHeight={100}
-            onLayoutChange={handleLayoutChange}
+            onLayoutChange={(layout, layouts) => setLayouts(layouts)}
             isDraggable={true}
             isResizable={true}
-            draggableHandle=".card-header"
+            resizeHandles={['se']}
+            margin={[20, 20]}
+            containerPadding={[20, 20]}
+            draggableHandle=".widget-header"
+            onResize={handleResize}
+            preventCollision={false}
+            compactType={null}
           >
             {widgets.map(widget => (
-              <div key={widget.id} className="grid-item">
+              <div 
+                key={widget.id} 
+                className="widget-item"
+                data-grid-id={widget.id}
+                style={{ 
+                  minWidth: MIN_WIDTH,
+                  minHeight: MIN_HEIGHT,
+                  width: '100%',
+                  height: '100%'
+                }}
+              >
+                <div className="widget-header">
+                  <h3>{widget.title}</h3>
+                  <div className="widget-controls">
+                    <button 
+                      className="delete-button"
+                      onClick={() => handleRemoveWidget(widget.id)}
+                      title="Remove Widget"
+                    >
+                      <svg 
+                        viewBox="0 0 24 24" 
+                        fill="none" 
+                        stroke="currentColor" 
+                        strokeWidth="2"
+                        strokeLinecap="round" 
+                        strokeLinejoin="round"
+                        width="18"
+                        height="18"
+                      >
+                        <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2M10 11v6M14 11v6"/>
+                      </svg>
+                    </button>
+                  </div>
+                </div>
                 <div 
-                  className="widget-container"
-                  style={{ 
-                    background: 'transparent',
-                    boxShadow: 'none',
-                    border: 'none'
+                  className="widget-content"
+                  style={{
+                    width: '100%',
+                    height: 'calc(100% - 50px)',
+                    overflow: 'hidden'
                   }}
                 >
-                  <div 
-                    className="card-content draggable-area"
-                    style={{ 
-                      padding: 0,
-                      background: 'transparent'
-                    }}
-                  >
-                    {widget.type === 'graph' ? (
-                      <div 
-                        className="graph-content"
-                        style={{
-                          background: 'transparent',
-                          boxShadow: 'none'
-                        }}
-                      >
-                        {renderGraph(widget)}
-                        <button 
-                          className="graph-delete-button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleRemoveWidget(widget.id);
-                          }}
-                          title="Delete Graph"
-                        >
-                          <svg 
-                            viewBox="0 0 24 24" 
-                            fill="none" 
-                            stroke="currentColor" 
-                            strokeLinecap="round" 
-                            strokeLinejoin="round"
-                          >
-                            <path d="M18 6L6 18M6 6l12 12"/>
-                          </svg>
-                        </button>
-                      </div>
-                    ) : (
-                      <div 
-                        className="widget-content"
-                        style={{
-                          background: 'transparent',
-                          boxShadow: 'none'
-                        }}
-                        dangerouslySetInnerHTML={{ __html: widget.content }}
-                      />
-                    )}
-                  </div>
+                  {isGraphWidget(widget) && widget.chartProps && (
+                    generateChartComponent(
+                      widget.chartProps.type,
+                      widget.chartProps.data,
+                      widget.chartProps.colors
+                    )
+                  )}
                 </div>
               </div>
             ))}

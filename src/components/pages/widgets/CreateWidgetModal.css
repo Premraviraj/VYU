@@ -251,6 +251,7 @@
 }
 
 .metric-item {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 1rem;
@@ -270,6 +271,43 @@
 .metric-item.selected {
   background: rgba(79, 70, 229, 0.1);
   border-color: rgba(79, 70, 229, 0.3);
+  padding-right: 3rem;
+}
+
+.metric-item:hover .metric-delete-button {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.metric-delete-button {
+  position: absolute;
+  right: 0.75rem;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(239, 68, 68, 0.1);
+  border: none;
+  color: #ef4444;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  opacity: 0;
+  transform: scale(0.8);
+}
+
+.metric-delete-button:hover {
+  background: rgba(239, 68, 68, 0.2);
+  transform: scale(1.1);
+}
+
+.metric-checkbox {
+  flex-shrink: 0;
+}
+
+.metric-item.selected:hover {
+  background: rgba(79, 70, 229, 0.15);
 }
 
 .metric-checkbox {
@@ -470,4 +508,19 @@
   border: none !important;
   border-radius: 8px;
   padding: 1rem;
+}
+
+@keyframes fadeInScale {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.metric-delete-button {
+  animation: fadeInScale 0.2s ease-out;
 } 
