@@ -295,7 +295,19 @@
   background: #f8fafc;
   border-radius: 16px;
   padding: 2rem;
-  margin-top: 1.5rem;
+  margin-top: 20px;
+  width: 100%;
+}
+
+.graph-preview h3 {
+  margin-bottom: 15px;
+  color: #1e293b;
+  font-size: 1.1rem;
+}
+
+/* Ensure chart containers take full height */
+.recharts-responsive-container {
+  min-height: 300px !important;
 }
 
 /* Modal Footer */
@@ -483,4 +495,69 @@
   border-color: #4f46e5;
 }
 
-/* Keep other existing styles ... */ 
+.video-source-fields {
+  background: white;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.video-source-fields h5 {
+  margin: 0 0 12px 0;
+  color: #4f46e5;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.fields-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 8px;
+}
+
+.axis-config {
+  display: flex;
+  gap: 20px;
+  margin-top: 15px;
+}
+
+.axis-select {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.axis-select label {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #4b5563;
+}
+
+.axis-dropdown {
+  padding: 8px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: white;
+  color: #1f2937;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.axis-dropdown:hover {
+  border-color: #6366f1;
+}
+
+.axis-dropdown:focus {
+  outline: none;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+}
+
+.axis-dropdown option {
+  padding: 8px;
+} 
