@@ -15,8 +15,6 @@ import StorageIcon from '@mui/icons-material/Storage';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import LayersOutlinedIcon from '@mui/icons-material/LayersOutlined';
 import StackLoader from '../../common/StackLoader';
-import { BarChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, Bar } from 'recharts';
-import { PieChart, Pie, Cell } from 'recharts';
 import { VehicleStats as ImportedVehicleStats, RuleCounts as ImportedRuleCounts } from '../../../data/vehicleData';
 import StorageRoundedIcon from '@mui/icons-material/StorageRounded';
 
@@ -754,7 +752,6 @@ const WidgetsPage: React.FC = () => {
       <GraphModal
         isOpen={isGraphModalOpen}
         onClose={() => setIsGraphModalOpen(false)}
-        selectedData={[]}
         onGraphCreated={handleGraphCreated}
       />
 

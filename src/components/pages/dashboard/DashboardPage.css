@@ -879,3 +879,226 @@ css
   from { opacity: 0; }
   to { opacity: 1; }
 }
+
+.empty-state {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 2px dashed rgba(255, 255, 255, 0.1);
+  border-radius: 24px;
+  text-align: center;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.empty-state:hover {
+  border-color: rgba(99, 102, 241, 0.3);
+  background: rgba(255, 255, 255, 0.05);
+  transform: translateY(-4px);
+}
+
+.empty-state:hover .plus-icon {
+  transform: rotate(180deg) scale(1.1);
+  background: #4f46e5;
+}
+
+.plus-icon {
+  width: 80px;
+  height: 80px;
+  background: rgba(99, 102, 241, 0.2);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 2rem;
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
+.plus-icon::before,
+.plus-icon::after {
+  content: '';
+  position: absolute;
+  background: #e2e8f0;
+  border-radius: 4px;
+  transition: all 0.3s ease;
+}
+
+.plus-icon::before {
+  width: 4px;
+  height: 32px;
+}
+
+.plus-icon::after {
+  width: 32px;
+  height: 4px;
+}
+
+.empty-state:hover .plus-icon::before,
+.empty-state:hover .plus-icon::after {
+  background: white;
+  box-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+}
+
+.empty-state h3 {
+  font-size: 1.8rem;
+  color: #e2e8f0;
+  margin: 0 0 1rem 0;
+  font-weight: 600;
+}
+
+.empty-state p {
+  font-size: 1.1rem;
+  color: #94a3b8;
+  margin: 0;
+  opacity: 0.8;
+}
+
+/* Pulse animation for the plus icon */
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  50% {
+    opacity: 0.5;
+  }
+  100% {
+    transform: scale(1.3);
+    opacity: 0;
+  }
+}
+
+.plus-icon::before {
+  animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+/* Ripple effect on hover */
+.empty-state::after {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle, rgba(99, 102, 241, 0.1) 0%, transparent 70%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.empty-state:hover::after {
+  opacity: 1;
+}
+
+/* Add floating animation */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.empty-state {
+  animation: float 4s ease-in-out infinite;
+}
+
+/* Add shine effect */
+@keyframes shine {
+  from {
+    background-position: 200% center;
+  }
+}
+
+.empty-state h3 {
+  background: linear-gradient(
+    90deg,
+    #e2e8f0 0%,
+    #ffffff 50%,
+    #e2e8f0 100%
+  );
+  background-size: 200% auto;
+  color: transparent;
+  -webkit-background-clip: text;
+  background-clip: text;
+  animation: shine 4s linear infinite;
+}
+
+/* Add styles for the blank window */
+.blank-window-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(8px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.blank-window {
+  background: linear-gradient(145deg, #ffffff, #f8fafc);
+  border-radius: 24px;
+  width: 90%;
+  max-width: 1000px;
+  height: 80vh;
+  position: relative;
+  box-shadow: 
+    0 20px 40px rgba(0, 0, 0, 0.2),
+    0 0 0 1px rgba(255, 255, 255, 0.1);
+  animation: slideUp 0.4s ease-out;
+  overflow: hidden;
+}
+
+.blank-window-header {
+  padding: 1.5rem 2rem;
+  border-bottom: 2px solid rgba(79, 70, 229, 0.1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: white;
+}
+
+.blank-window-header h2 {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0;
+}
+
+.close-button {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0, 0, 0, 0.05);
+  color: #64748b;
+  font-size: 1.5rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.close-button:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  transform: rotate(90deg);
+}
+
+.blank-window-content {
+  padding: 2rem;
+  height: calc(100% - 80px);
+  overflow-y: auto;
+}

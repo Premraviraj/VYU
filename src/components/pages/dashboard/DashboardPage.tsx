@@ -14,6 +14,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, Legend,
   ResponsiveContainer
 } from 'recharts';
+import GraphModal from '../widgets/GraphModal';
 
 const ResponsiveGridLayout = WidthProvider(Responsive);
 
@@ -23,7 +24,9 @@ const INITIAL_WIDTH = 372;
 const INITIAL_HEIGHT = 250;
 
 const DashboardPage: React.FC = () => {
+  const [isBlankWindowOpen, setIsBlankWindowOpen] = useState(false);
   const { widgets, removeWidget } = useWidgets();
+  const [isLoading, setIsLoading] = useState(true);
   const [layouts, setLayouts] = useState({});
 
   const handleRemoveWidget = (id: string) => {
@@ -281,6 +284,28 @@ const DashboardPage: React.FC = () => {
     }
   };
 
+  // Add this new component
+  const BlankWindow = () => {
+    return (
+      <div className="blank-window-overlay">
+        <div className="blank-window">
+          <div className="blank-window-header">
+            <h2>Widgets</h2>
+            <button 
+              className="close-button"
+              onClick={() => setIsBlankWindowOpen(false)}
+            >
+              ×
+            </button>
+          </div>
+          <div className="blank-window-content">
+            {/* Content will be added later with API integration */}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="dashboard-container">
       <ToastContainer />
@@ -360,11 +385,19 @@ const DashboardPage: React.FC = () => {
             ))}
           </ResponsiveGridLayout>
         ) : (
-          <div className="no-widgets-message">
-            <p>No widgets created yet. Create widgets from the Widgets page.</p>
+          <div 
+            className="empty-state" 
+            onClick={() => setIsBlankWindowOpen(true)}
+          >
+            <div className="plus-icon"></div>
+            <h3>No Widgets Yet</h3>
+            <p>Click to add some widgets to your dashboard</p>
           </div>
         )}
       </div>
+
+      {/* Replace GraphModal with BlankWindow */}
+      {isBlankWindowOpen && <BlankWindow />}
     </div>
   );
 };
