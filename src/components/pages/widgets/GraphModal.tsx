@@ -14,7 +14,9 @@ import {
   Legend,
   ArcElement
 } from 'chart.js';
-import { Bar, Line, Pie } from 'react-chartjs-2';
+import { Chart, Bar, Line, Pie } from 'react-chartjs-2';
+import { toast } from 'react-hot-toast';
+
 
 interface GraphModalProps {
   isOpen: boolean;
@@ -22,7 +24,7 @@ interface GraphModalProps {
   onGraphCreated?: () => void;
 }
 
-type GraphType = 'bar' | 'horizontalBar' | 'line' | 'comboBarLine' | 'radialGradient' | 'doughnut';
+type GraphType = 'bar' | 'multiPie' | 'line' | 'comboBarLine' | 'radialGradient' | 'doughnut';
 
 // Register Chart.js components
 ChartJS.register(
@@ -36,6 +38,24 @@ ChartJS.register(
   Legend,
   ArcElement
 );
+
+// Add this interface for the API request
+interface WidgetPayload {
+  id: string;
+  type: 'graph';
+  title: string;
+  content: string;
+  backgroundColor: string;
+  chartProps: {
+    type: GraphType;
+    data: Array<{
+      label: string;
+      value: number;
+      source: string;
+    }>;
+    colors: Record<string, any>;
+  };
+}
 
 const GraphModal: React.FC<GraphModalProps> = ({ isOpen, onClose, onGraphCreated }) => {
   const { addWidget } = useWidgets();
@@ -127,31 +147,77 @@ const GraphModal: React.FC<GraphModalProps> = ({ isOpen, onClose, onGraphCreated
     }
   };
 
-  const handleCreateGraph = () => {
-    const graphId = `graph-${Date.now()}`;
-    
-    const newWidget = {
-      id: graphId,
-      type: 'graph' as const,
-      title: graphTitle || 'New Graph',
-      content: '',
-      backgroundColor: selectedColor,
-      chartProps: {
-        type: selectedGraphType,
-        data: selectedFields.map(fieldId => {
-          const [source, field] = fieldId.split(':');
-          return {
-            label: `${field} (Source ${source})`,
-            value: availableFields[field] || 0
-          };
-        }),
-        colors: {}
+  // Update the handleCreateGraph function
+  const handleCreateGraph = async () => {
+    try {
+      if (!selectedFields.length || !selectedCollection || !selectedGraphType) {
+        toast.error('Please select all required fields');
+        return;
       }
-    };
 
-    addWidget(newWidget);
-    onGraphCreated?.();
-    onClose();
+      // Format data according to required backend structure
+      const graphData = {
+        uuid: Math.random().toString(16).slice(2), // Generate a random uuid
+        widget_name: graphTitle || 'New Graph',
+        fields: {
+          background_color: selectedColor,
+          collection_name: selectedCollection,
+          video_source: [selectedVideoSource],
+          Rule: selectedFields.map(fieldId => {
+            const [_, field] = fieldId.split(':');
+            return field;
+          }),
+          chart: getChartTypeName(selectedGraphType)
+        },
+        createdAt: new Date().toISOString()
+      };
+
+      console.log('Sending data to server:', graphData);
+
+      // Store in Widgets database
+      const response = await fetch(`${API_URL}/api/v1/Widgets/saveWidget`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        credentials: 'include',
+        body: JSON.stringify(graphData)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Server response:', errorData);
+        throw new Error(errorData.message || 'Failed to save to database');
+      }
+
+      const savedData = await response.json();
+      console.log('Successfully saved to database:', savedData);
+
+      toast.success('Graph data saved successfully!');
+
+      if (onGraphCreated) {
+        onGraphCreated();
+      }
+      onClose();
+
+    } catch (error) {
+      console.error('Error saving graph:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to save graph. Please try again.');
+    }
+  };
+
+  // Helper function to convert graph type to readable name
+  const getChartTypeName = (type: GraphType): string => {
+    const chartTypes = {
+      bar: 'Bar Chart',
+      multiPie: 'Pie Chart',
+      line: 'Line Chart',
+      comboBarLine: 'Combo Chart',
+      radialGradient: 'Radial Chart',
+      doughnut: 'Doughnut Chart'
+    };
+    return chartTypes[type] || type;
   };
 
   const generateChartComponent = (type: GraphType) => {
@@ -262,17 +328,83 @@ const GraphModal: React.FC<GraphModalProps> = ({ isOpen, onClose, onGraphCreated
           />
         );
 
-      case 'horizontalBar':
+      case 'multiPie':
         return (
-          <Bar
-            data={chartData}
+          <Pie
+            data={{
+              labels: chartData.labels,
+              datasets: [{
+                data: chartData.datasets[0].data,
+                backgroundColor: [
+                  'rgba(255, 99, 132, 0.8)',
+                  'rgba(54, 162, 235, 0.8)',
+                  'rgba(255, 206, 86, 0.8)',
+                  'rgba(75, 192, 192, 0.8)',
+                  'rgba(153, 102, 255, 0.8)',
+                  'rgba(255, 159, 64, 0.8)'
+                ],
+                borderColor: '#ffffff',
+                borderWidth: 2,
+                hoverOffset: 4,
+                hoverBorderColor: '#ffffff',
+                hoverBorderWidth: 3,
+                offset: 10,
+                weight: 1
+              }, {
+                data: chartData.datasets[0].data.map(value => value * 0.7), // Inner ring
+                backgroundColor: [
+                  'rgba(255, 99, 132, 0.6)',
+                  'rgba(54, 162, 235, 0.6)',
+                  'rgba(255, 206, 86, 0.6)',
+                  'rgba(75, 192, 192, 0.6)',
+                  'rgba(153, 102, 255, 0.6)',
+                  'rgba(255, 159, 64, 0.6)'
+                ],
+                borderColor: '#ffffff',
+                borderWidth: 2,
+                hoverOffset: 4,
+                hoverBorderColor: '#ffffff',
+                hoverBorderWidth: 3,
+                offset: 5,
+                weight: 0.8
+              }]
+            }}
             options={{
               ...commonOptions,
-              indexAxis: 'y' as const,
-              elements: {
-                bar: {
-                  borderRadius: 6,
-                  borderSkipped: false
+              cutout: '30%',
+              plugins: {
+                legend: {
+                  position: 'right',
+                  labels: {
+                    padding: 20,
+                    usePointStyle: true,
+                    pointStyle: 'circle',
+                    font: {
+                      size: 12,
+                      weight: 500
+                    },
+                    generateLabels: (chart) => {
+                      const datasets = chart.data.datasets;
+                      return chart.data.labels?.map((label, i) => ({
+                        text: label as string,
+                        fillStyle: datasets[0].backgroundColor?.[i] as string,
+                        strokeStyle: datasets[0].borderColor as string,
+                        lineWidth: 2,
+                        hidden: false,
+                        index: i,
+                        pointStyle: 'circle'
+                      })) || [];
+                    }
+                  }
+                },
+                tooltip: {
+                  callbacks: {
+                    label: (context) => {
+                      const label = context.label || '';
+                      const value = context.raw as number;
+                      return `${label}: ${value}`;
+                    }
+                  }
                 }
               }
             }}
@@ -294,47 +426,69 @@ const GraphModal: React.FC<GraphModalProps> = ({ isOpen, onClose, onGraphCreated
         );
 
       case 'comboBarLine':
-        const comboData = {
-          labels: chartData.labels,
-          datasets: [
-            {
-              type: 'bar' as const,
-              label: 'Bar',
-              data: selectedFields.map(fieldId => {
-                const [source, field] = fieldId.split(':');
-                return availableFields[field] || 0;
-              }),
-              backgroundColor: 'rgba(99, 102, 241, 0.5)',
-              borderColor: '#6366F1',
-              borderWidth: 2,
-              borderRadius: 6,
-              order: 1
-            },
-            {
-              type: 'bar' as const,
-              label: 'Line',
-              data: selectedFields.map(fieldId => {
-                const [source, field] = fieldId.split(':');
-                return availableFields[field] || 0;
-              }),
-              borderColor: '#10B981',
-              backgroundColor: 'rgba(16, 185, 129, 0.5)',
-              borderWidth: 2,
-              borderRadius: 6,
-              order: 2
-            }
-          ]
-        };
-
         return (
-          <Bar
-            data={comboData}
+          <Chart
+            type='bar'
+            data={{
+              labels: chartData.labels,
+              datasets: [
+                {
+                  type: 'bar',
+                  label: 'Bar Data',
+                  data: selectedFields.map(fieldId => {
+                    const [source, field] = fieldId.split(':');
+                    return availableFields[field] || 0;
+                  }),
+                  backgroundColor: 'rgba(99, 102, 241, 0.5)',
+                  borderColor: '#6366F1',
+                  borderWidth: 2,
+                  borderRadius: 6,
+                  order: 2
+                },
+                {
+                  type: 'line',
+                  label: 'Line Data',
+                  data: selectedFields.map(fieldId => {
+                    const [source, field] = fieldId.split(':');
+                    return availableFields[field] || 0;
+                  }),
+                  borderColor: '#10B981',
+                  backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                  borderWidth: 2,
+                  pointBackgroundColor: '#10B981',
+                  pointBorderColor: '#ffffff',
+                  pointRadius: 4,
+                  pointHoverRadius: 6,
+                  fill: true,
+                  tension: 0.4,
+                  order: 1
+                }
+              ]
+            }}
             options={{
               ...commonOptions,
-              elements: {
-                bar: { 
-                  borderRadius: 6,
-                  borderSkipped: false
+              responsive: true,
+              plugins: {
+                legend: {
+                  position: 'bottom',
+                  labels: {
+                    usePointStyle: true,
+                    padding: 20,
+                    font: { size: 12 }
+                  }
+                }
+              },
+              scales: {
+                y: {
+                  beginAtZero: true,
+                  grid: {
+                    color: 'rgba(0, 0, 0, 0.05)'
+                  }
+                },
+                x: {
+                  grid: {
+                    display: false
+                  }
                 }
               }
             }}
@@ -422,6 +576,36 @@ const GraphModal: React.FC<GraphModalProps> = ({ isOpen, onClose, onGraphCreated
     }
   };
 
+  // Update the collection selection handler
+  const handleCollectionChange = async (collection: string) => {
+    // Clear previous selections
+    setSelectedFields([]);
+    setAvailableFields({});
+    setSelectedVideoSource('');
+    
+    // Set new collection and fetch its video sources
+    setSelectedCollection(collection);
+    try {
+      const response = await fetch(
+        `${API_URL}/api/v1/Collection/videoSources?collection=${collection}`,
+        { credentials: 'include' }
+      );
+      if (response.ok) {
+        const data = await response.json();
+        setAvailableVideoSources(data.videoSources.map((vs: any) => vs.source));
+        // If there are video sources, select the first one and fetch its fields
+        if (data.videoSources.length > 0) {
+          const firstSource = data.videoSources[0].source;
+          setSelectedVideoSource(firstSource);
+          fetchFields(collection, firstSource);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching video sources:', error);
+      toast.error('Failed to fetch video sources');
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -464,23 +648,52 @@ const GraphModal: React.FC<GraphModalProps> = ({ isOpen, onClose, onGraphCreated
           </div>
 
           {/* Data Selection Section */}
-          <div className="config-section">
-            <h3>Select Data</h3>
+          <div className="config-section data-selection">
+            <h3 className="section-title">
+              <span className="title-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" 
+                    strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                    className="animate-pulse-subtle"/>
+                  <circle cx="12" cy="12" r="1" fill="currentColor" className="animate-ping-slow"/>
+                </svg>
+              </span>
+              Select Data
+              <span className="title-badge">Step 1/3</span>
+            </h3>
             <div className="data-selection-flow">
               {/* Collection Selection */}
-              <div className="selection-group">
-                <h4>Select Collection</h4>
+              <div className="selection-group collection-group">
+                <h4>
+                  <span className="group-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                      <path d="M4 4h16a2 2 0 012 2v12a2 2 0 01-2 2H4a2 2 0 01-2-2V6a2 2 0 012-2z" 
+                        strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M8 2v4M16 2v4M3 10h18" 
+                        strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </span>
+                  Select Collection
+                </h4>
                 <div className="collection-buttons">
                   {availableCollections.map(collection => (
                     <button
                       key={collection}
-                      className={`selection-button ${selectedCollection === collection ? 'selected' : ''}`}
-                      onClick={() => {
-                        setSelectedCollection(collection);
-                        fetchVideoSources(collection);
-                      }}
+                      className={`selection-button collection-btn ${selectedCollection === collection ? 'selected' : ''}`}
+                      onClick={() => handleCollectionChange(collection)}
                     >
-                      {collection}
+                      <div className="collection-btn-content">
+                        <div className="collection-info">
+                          <span className="collection-name">{collection}</span>
+                          <span className="collection-type">Data Collection</span>
+                        </div>
+                      </div>
+                      {selectedCollection === collection && (
+                        <div className="selection-status">
+                          <span className="status-dot"></span>
+                          <span className="status-text">Selected</span>
+                        </div>
+                      )}
                     </button>
                   ))}
                 </div>
@@ -488,19 +701,35 @@ const GraphModal: React.FC<GraphModalProps> = ({ isOpen, onClose, onGraphCreated
 
               {/* Video Source Selection */}
               {selectedCollection && (
-                <div className="selection-group">
-                  <h4>Select Video Source</h4>
+                <div className="selection-group source-group">
+                  <h4>
+                    <span className="group-icon">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="video-icon">
+                        <path d="M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9 9 4.03 9 9z" 
+                          strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        <path d="M12 8v8M8 12h8" 
+                          strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        <circle cx="12" cy="12" r="3" 
+                          strokeWidth="2"/>
+                      </svg>
+                    </span>
+                    Select Video Source
+                  </h4>
                   <div className="source-buttons">
                     {availableVideoSources.map(source => (
                       <button
                         key={source}
-                        className={`selection-button ${selectedVideoSource === source ? 'selected' : ''}`}
+                        className={`selection-button source-btn ${selectedVideoSource === source ? 'selected' : ''}`}
                         onClick={() => {
                           setSelectedVideoSource(source);
                           fetchFields(selectedCollection, source);
                         }}
                       >
-                        Source {source}
+                        <span className="source-number">#{source}</span>
+                        <span className="source-label">Source {source}</span>
+                        {selectedVideoSource === source && (
+                          <span className="pulse-indicator"></span>
+                        )}
                       </button>
                     ))}
                   </div>
@@ -509,26 +738,59 @@ const GraphModal: React.FC<GraphModalProps> = ({ isOpen, onClose, onGraphCreated
 
               {/* Field Selection */}
               {Object.keys(availableFields).length > 0 && (
-                <div className="selection-group">
-                  <h4>Select Fields</h4>
+                <div className="selection-group fields-group">
+                  <h4>
+                    <span className="group-icon">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="fields-icon">
+                        <path d="M19 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V5a2 2 0 00-2-2z" 
+                          strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        <path d="M7 8h10M7 12h10M7 16h10" 
+                          strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                          className="animate-draw-lines"/>
+                        <circle cx="4" cy="8" r="1" fill="currentColor" className="animate-blink"/>
+                        <circle cx="4" cy="12" r="1" fill="currentColor" className="animate-blink"/>
+                        <circle cx="4" cy="16" r="1" fill="currentColor" className="animate-blink"/>
+                      </svg>
+                    </span>
+                    Select Fields
+                    <span className="field-count">{selectedFields.length} selected</span>
+                  </h4>
                   <div className="fields-grid">
-                    {Object.entries(availableFields).map(([field, value]) => (
-                      <div
-                        key={field}
-                        className={`field-item ${selectedFields.includes(`${selectedVideoSource}:${field}`) ? 'selected' : ''}`}
-                        onClick={() => {
-                          const fieldId = `${selectedVideoSource}:${field}`;
-                          setSelectedFields(prev => 
-                            prev.includes(fieldId)
-                              ? prev.filter(f => f !== fieldId)
-                              : [...prev, fieldId]
-                          );
-                        }}
-                      >
-                        <div className="field-name">{field}</div>
-                        <div className="field-count">{value}</div>
-                      </div>
-                    ))}
+                    {Object.entries(availableFields).map(([field, value]) => {
+                      const fieldId = `${selectedVideoSource}:${field}`;
+                      const isSelected = selectedFields.includes(fieldId);
+                      return (
+                        <div
+                          key={field}
+                          className={`field-item ${isSelected ? 'selected' : ''}`}
+                          onClick={() => {
+                            setSelectedFields(prev => 
+                              prev.includes(fieldId)
+                                ? prev.filter(f => f !== fieldId)
+                                : [...prev, fieldId]
+                            );
+                          }}
+                        >
+                          <div className="field-content">
+                            <div className="field-name">
+                              <span className="field-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                  <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2v11z" 
+                                    strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                  <circle cx="12" cy="13" r="4" 
+                                    strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                </svg>
+                              </span>
+                              {field}
+                            </div>
+                            <div className="field-count">
+                              <span className="count-value">{value}</span>
+                              <span className="count-label">entries</span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -548,8 +810,10 @@ const GraphModal: React.FC<GraphModalProps> = ({ isOpen, onClose, onGraphCreated
                   >
                     <div className="graph-type-icon">
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                        <path d="M4 20h16M4 20V4m0 16l4-4v4m4 0V10m0 10l4-8v8m4 0V6l-4 14" 
-                          strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        <path d="M3 3v18h18" strokeWidth="2" strokeLinecap="round"/>
+                        <rect x="6" y="8" width="3" height="10" rx="1" strokeWidth="2"/>
+                        <rect x="11" y="5" width="3" height="13" rx="1" strokeWidth="2"/>
+                        <rect x="16" y="11" width="3" height="7" rx="1" strokeWidth="2"/>
                       </svg>
                     </div>
                     <div className="graph-type-content">
@@ -563,17 +827,18 @@ const GraphModal: React.FC<GraphModalProps> = ({ isOpen, onClose, onGraphCreated
                   </div>
 
                   <div 
-                    className={`graph-type-card ${selectedGraphType === 'horizontalBar' ? 'selected' : ''}`}
-                    onClick={() => setSelectedGraphType('horizontalBar')}
+                    className={`graph-type-card ${selectedGraphType === 'multiPie' ? 'selected' : ''}`}
+                    onClick={() => setSelectedGraphType('multiPie')}
                   >
                     <div className="graph-type-icon">
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                        <path d="M4 4h16M4 4v16M4 8h12M4 12h8M4 16h14M4 20h10" 
-                          strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        <circle cx="12" cy="12" r="8" strokeWidth="2"/>
+                        <path d="M12 4v8l5.5 5.5" strokeWidth="2" strokeLinecap="round"/>
+                        <path d="M12 12l-4 4" strokeWidth="2" strokeLinecap="round"/>
                       </svg>
                     </div>
                     <div className="graph-type-content">
-                      <h4>Horizontal Bar</h4>
+                      <h4>Multi-Pie Chart</h4>
                       <p>Left to right comparison</p>
                       <div className="graph-features">
                         <span className="feature-tag">Spacious</span>
@@ -588,8 +853,8 @@ const GraphModal: React.FC<GraphModalProps> = ({ isOpen, onClose, onGraphCreated
                   >
                     <div className="graph-type-icon">
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                        <path d="M3 12h4l3-9 4 18 3-9h4M3 20h18" 
-                          strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        <path d="M3 3v18h18" strokeWidth="2" strokeLinecap="round"/>
+                        <path d="M3 15l4-4 4 4 4-8 6 8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                       </svg>
                     </div>
                     <div className="graph-type-content">
@@ -608,8 +873,10 @@ const GraphModal: React.FC<GraphModalProps> = ({ isOpen, onClose, onGraphCreated
                   >
                     <div className="graph-type-icon">
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                        <path d="M4 20h16M4 20V4m0 16l4-4v4m4 0V10m0 10l4-8v8" strokeWidth="2"/>
-                        <path d="M3 12h4l3-9 4 18 3-9h4" strokeWidth="2" strokeDasharray="2 2"/>
+                        <path d="M3 3v18h18" strokeWidth="2" strokeLinecap="round"/>
+                        <rect x="6" y="10" width="3" height="8" rx="1" strokeWidth="2"/>
+                        <rect x="15" y="7" width="3" height="11" rx="1" strokeWidth="2"/>
+                        <path d="M4 12l4-2 4 2 4-6 4 6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                       </svg>
                     </div>
                     <div className="graph-type-content">
@@ -718,7 +985,7 @@ const GraphModal: React.FC<GraphModalProps> = ({ isOpen, onClose, onGraphCreated
           <button 
             className="create-button" 
             onClick={handleCreateGraph}
-            disabled={!selectedFields.length || !graphTitle.trim()}
+            disabled={!selectedFields.length}
           >
             Create Graph
           </button>

@@ -6,22 +6,9 @@ import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import './WidgetsPage.css';
 import { API_URL } from '../../../utils/config';
-import WbSunnyIcon from '@mui/icons-material/WbSunny';
-import WbTwilightIcon from '@mui/icons-material/WbTwilight';
-import NightsStayIcon from '@mui/icons-material/NightsStay';
-import StarIcon from '@mui/icons-material/Star';
-import SettingsIcon from '@mui/icons-material/Settings';
-import StorageIcon from '@mui/icons-material/Storage';
-import AccessTimeIcon from '@mui/icons-material/AccessTime';
-import LayersOutlinedIcon from '@mui/icons-material/LayersOutlined';
 import StackLoader from '../../common/StackLoader';
 import { VehicleStats as ImportedVehicleStats, RuleCounts as ImportedRuleCounts } from '../../../data/vehicleData';
 import StorageRoundedIcon from '@mui/icons-material/StorageRounded';
-
-interface TimeValue {
-  in: number;
-  out: number;
-}
 
 interface FilteredStats {
   VideoSource: string;
@@ -56,17 +43,11 @@ interface SelectedDataItem {
   };
 }
 
-interface VehicleStats {
-  vehicleType: string;
-  count: number;
-  in: number;
-  out: number;
-  lastUpdated: string;
-  filteredStats: FilteredStats;
-  rawData: Record<string, any>;
+interface ExpandedCardState {
+  collectionName: string;
+  videoSource: string;
 }
 
-// Add interface for video source response
 interface VideoSourceResponse {
   collection: string;
   videoSources: {
@@ -76,32 +57,17 @@ interface VideoSourceResponse {
   total: number;
 }
 
-// Add WebSocket connection
-const ws = new WebSocket('ws://localhost:8080');
-
-interface ExpandedCardState {
-  collectionName: string;
-  videoSource: string;
-}
-
 const WidgetsPage: React.FC = () => {
   const [isGraphModalOpen, setIsGraphModalOpen] = useState(false);
   const [isKPIModalOpen, setIsKPIModalOpen] = useState(false);
-  const [selectedData, setSelectedData] = useState<SelectedDataItem[]>([]);
   const [collectionsData, setCollectionsData] = useState<{[key: string]: any}>({});
-  const [expandedCollection, setExpandedCollection] = useState<string | 'all'>('all');
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [collectionDetails, setCollectionDetails] = useState<{ [key: string]: any }>({});
-  const [loadingDetails, setLoadingDetails] = useState<{ [key: string]: boolean }>({});
-  const [collectionData, setCollectionData] = useState<{ [key: string]: any }>({});
-  const [loadingCollectionData, setLoadingCollectionData] = useState<{ [key: string]: boolean }>({});
   const [expandedCard, setExpandedCard] = useState<ExpandedCardState | null>(null);
-  const [selectedCollection, setSelectedCollection] = useState<string | null>(null);
   const [filteredData, setFilteredData] = useState<FilteredData | null>(null);
   const [selectedVideoSource, setSelectedVideoSource] = useState<string>('1');
   const [availableVideoSources, setAvailableVideoSources] = useState<string[]>([]);
-  const [graphs, setGraphs] = useState<{ [key: string]: any }>({});
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedData, setSelectedData] = useState<SelectedDataItem[]>([]);
 
   // Create a ref for the widgets container
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -152,53 +118,6 @@ const WidgetsPage: React.FC = () => {
 
     fetchData();
   }, []);
-
-  const handleDataSelection = (data: {
-    name: string;
-    field: string;
-    count: number;
-    videoSource: string;
-  }) => {
-    setSelectedData(prev => {
-      // Find if this collection already exists
-      const existingCollection = prev.find(item => item.name === data.name);
-
-      if (existingCollection) {
-        // Update existing collection
-        return prev.map(item => 
-          item.name === data.name 
-            ? {
-                ...item,
-                filteredStats: {
-                  VideoSource: data.videoSource,
-                  RuleCounts: {
-                    ...item.filteredStats?.RuleCounts,
-                    [data.field]: data.count,
-                    Entry: data.field === 'Entry' ? data.count : (item.filteredStats?.RuleCounts.Entry || 0),
-                    Exit: data.field === 'Exit' ? data.count : (item.filteredStats?.RuleCounts.Exit || 0),
-                    Total: data.count
-                  }
-                }
-              }
-            : item
-        );
-      }
-
-      // Add new collection
-      return [...prev, {
-        name: data.name,
-        filteredStats: {
-          VideoSource: data.videoSource,
-          RuleCounts: {
-            [data.field]: data.count,
-            Entry: data.field === 'Entry' ? data.count : 0,
-            Exit: data.field === 'Exit' ? data.count : 0,
-            Total: data.count
-          }
-        }
-      }];
-    });
-  };
 
   // Add function to fetch video sources
   const fetchVideoSources = async (collectionName: string) => {
@@ -280,11 +199,6 @@ const WidgetsPage: React.FC = () => {
     }
   };
 
-  const handleCardClick = (collectionName: string) => {
-    console.log('Expanding collection:', collectionName);
-    setExpandedCollection(expandedCollection === collectionName ? 'all' : collectionName);
-  };
-
   const handleCreateGraph = () => {
     setIsGraphModalOpen(true);
   };
@@ -317,105 +231,6 @@ const WidgetsPage: React.FC = () => {
     setSelectedData([]);
   };
 
-  const handleDetailCardClick = async (collectionName: string) => {
-    try {
-      setLoadingDetails(prev => ({ ...prev, [collectionName]: true }));
-      
-      // Extract the actual collection name from the key
-      const actualCollectionName = collectionName.toLowerCase().replace(/\s+/g, '');
-      
-      // Create query parameters with the actual collection name
-      const queryParams = new URLSearchParams({
-        collectionName: actualCollectionName  // This will be 'cam1', 'cam2', 'peoples', etc.
-      }).toString();
-      
-      console.log(`Fetching data for collection: ${actualCollectionName}`);
-      
-      const response = await fetch(`${API_URL}/api/v1/Collection/data?${queryParams}`, {
-        method: 'GET',
-        headers: {
-          'Accept': '*/*',
-        },
-        credentials: 'include',
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch data for ${collectionName}`);
-      }
-
-      const data = await response.json();
-      console.log(`Response for ${collectionName}:`, data);
-
-      setCollectionDetails(prev => ({
-        ...prev,
-        [collectionName]: data,
-      }));
-    } catch (err) {
-      console.error('Fetch Error:', err);
-      toast.error(`Failed to load data for ${collectionName}`);
-    } finally {
-      setLoadingDetails(prev => ({ ...prev, [collectionName]: false }));
-    }
-  };
-  
-
-  const renderValue = (value: unknown): React.ReactNode => {
-    if (typeof value === 'string' 
-      || typeof value === 'number' 
-      || typeof value === 'boolean'
-      || value === null
-      || value === undefined) {
-      return value;
-    }
-    if (typeof value === 'object' && value !== null) {
-      return JSON.stringify(value);
-    }
-    return String(value);
-  };
-
-  const renderTimeValue = (subValue: unknown): TimeValue => {
-    if (typeof subValue === 'object' && subValue !== null && 'in' in subValue && 'out' in subValue) {
-      return subValue as TimeValue;
-    }
-    return { in: 0, out: 0 };
-  };
-
-  const getTimeIcon = (timeKey: string) => {
-    switch(timeKey) {
-      case 'morning': return <WbSunnyIcon className="time-icon morning" />;
-      case 'afternoon': return <WbTwilightIcon className="time-icon afternoon" />;
-      case 'evening': return <NightsStayIcon className="time-icon evening" />;
-      case 'night': return <StarIcon className="time-icon night" />;
-      default: return null;
-    }
-  };
-
-  const getIconForKey = (key: string) => {
-    switch(key.toLowerCase()) {
-      case 'status':
-        return <SettingsIcon className="detail-icon status" />;
-      case 'lastupdate':
-      case 'lastupdated':
-      case 'timestamp':
-        return <AccessTimeIcon className="detail-icon time" />;
-      case 'storage':
-      case 'data':
-        return <StorageIcon className="detail-icon storage" />;
-      default:
-        return <LayersOutlinedIcon className="detail-icon default" />;
-    }
-  };
-
-  const formatValue = (value: any): string => {
-    if (value instanceof Date) {
-      return new Date(value).toLocaleString();
-    }
-    if (typeof value === 'boolean') {
-      return value ? 'Active' : 'Inactive';
-    }
-    return String(value);
-  };
-
   const getCollectionNumber = (collectionName: string): string => {
     const number = collectionName.replace(/[^0-9]/g, '');
     return number;
@@ -426,49 +241,6 @@ const WidgetsPage: React.FC = () => {
       const numA = parseInt(getCollectionNumber(a));
       const numB = parseInt(getCollectionNumber(b));
       return numA - numB;
-    });
-  };
-
-  const transformToVehicleStats = (selectedItems: SelectedDataItem[]): ImportedVehicleStats[] => {
-    return selectedItems.map(item => {
-      // Create a properly typed RuleCounts object with required fields
-      const ruleCounts: ImportedRuleCounts = {
-        Entry: item.filteredStats?.RuleCounts?.Entry || 0,
-        Exit: item.filteredStats?.RuleCounts?.Exit || 0,
-        Total: item.filteredStats?.RuleCounts?.Total || 0
-      };
-
-      // Create the vehicle stats object with the proper type
-      const vehicleStats: ImportedVehicleStats = {
-        vehicleType: item.name,
-        count: ruleCounts.Total || 0,
-        in: ruleCounts.Entry,
-        out: ruleCounts.Exit,
-        lastUpdated: new Date().toISOString(),
-        filteredStats: {
-          VideoSource: item.filteredStats?.VideoSource || "1",
-          RuleCounts: {
-            Entry: ruleCounts.Entry,
-            Exit: ruleCounts.Exit,
-            Total: ruleCounts.Total
-          }
-        },
-        rawData: {}
-      };
-
-      return vehicleStats;
-    });
-  };
-
-  const addGraph = (id: string, graph: any) => {
-    setGraphs(prev => ({ ...prev, [id]: graph }));
-  };
-
-  const removeGraph = (id: string) => {
-    setGraphs(prev => {
-      const newGraphs = { ...prev };
-      delete newGraphs[id];
-      return newGraphs;
     });
   };
 
@@ -635,10 +407,6 @@ const WidgetsPage: React.FC = () => {
       document.querySelector('.widgets-page')?.appendChild(container);
     }
   }, []);
-
-  const handleFieldClick = (field: string, count: number) => {
-    return; // This prevents any field selection
-  };
 
   return (
     <div className="widgets-page">
