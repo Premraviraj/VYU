@@ -754,4 +754,88 @@
 @keyframes gradientFlow {
   0% { background-position: 0% 50%; }
   100% { background-position: 200% 50%; }
+}
+
+/* Update the fields grid styles */
+.fields-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 1rem;
+  padding: 0.5rem;
+}
+
+.field-item {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.field-item:hover {
+  transform: translateY(-2px);
+  border-color: #4f46e5;
+  background: rgba(79, 70, 229, 0.02);
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.05);
+}
+
+.field-item.selected {
+  border: 2px solid #4f46e5;
+  background: rgba(79, 70, 229, 0.03);
+}
+
+.field-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 1rem;
+}
+
+.field-name {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.9rem;
+  color: #1e293b;
+  font-weight: 500;
+}
+
+.field-icon {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(79, 70, 229, 0.08);
+  border-radius: 6px;
+  color: #4f46e5;
+}
+
+.field-count {
+  display: flex;
+  align-items: baseline;
+  gap: 0.25rem;
+}
+
+.count-value {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #4f46e5;
+}
+
+.count-label {
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+/* Add responsive adjustments */
+@media (max-width: 640px) {
+  .fields-grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  }
 } 

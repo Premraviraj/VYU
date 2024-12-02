@@ -60,7 +60,7 @@ interface VideoSourceResponse {
 const WidgetsPage: React.FC = () => {
   const [isGraphModalOpen, setIsGraphModalOpen] = useState(false);
   const [isKPIModalOpen, setIsKPIModalOpen] = useState(false);
-  const [collectionsData, setCollectionsData] = useState<{[key: string]: any}>({});
+  const [collectionsData, setCollectionsData] = useState<string[]>([]);
   const [expandedCard, setExpandedCard] = useState<ExpandedCardState | null>(null);
   const [filteredData, setFilteredData] = useState<FilteredData | null>(null);
   const [selectedVideoSource, setSelectedVideoSource] = useState<string>('1');
@@ -105,12 +105,19 @@ const WidgetsPage: React.FC = () => {
 
         const data = await response.json();
         console.log('Collections from API:', data);
-        setCollectionsData(data.collections);
+        
+        // Ensure we're setting an array
+        if (data && Array.isArray(data.collections)) {
+          setCollectionsData(data.collections);
+        } else {
+          setCollectionsData([]); // Set empty array if no data
+        }
         setError(null);
       } catch (err) {
         console.error('Fetch Error:', err);
         setError(err instanceof Error ? err.message : 'Failed to fetch data');
         toast.error('Failed to load collections data');
+        setCollectionsData([]); // Set empty array on error
       } finally {
         setIsLoading(false);
       }
@@ -167,14 +174,36 @@ const WidgetsPage: React.FC = () => {
       }
 
       // Fetch video sources first
-      await fetchVideoSources(collectionName);
+      const sourcesResponse = await fetch(
+        `${API_URL}/api/v1/Collection/videoSources?collection=${encodeURIComponent(collectionName)}`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+          credentials: 'include',
+        }
+      );
+
+      if (!sourcesResponse.ok) {
+        throw new Error(`Failed to fetch video sources for ${collectionName}`);
+      }
+
+      const sourcesData = await sourcesResponse.json();
+      console.log('Video sources data:', sourcesData);
+      
+      // Extract and set video sources
+      const sources = sourcesData.videoSources.map((vs: any) => vs.source).filter(Boolean);
+      setAvailableVideoSources(sources);
       
       // Use the first video source or default to '1'
-      const initialSource = availableVideoSources[0] || '1';
+      const initialSource = sources[0] || '1';
+      setSelectedVideoSource(initialSource);
       
-      // Fetch filtered data
+      // Fetch collection data
       const response = await fetch(
-        `${API_URL}/api/v1/Collection/filtered/count?collection=${collectionName}&VideoSource=${initialSource}`,
+        `${API_URL}/api/v1/Collection/data?collectionName=${encodeURIComponent(collectionName)}&VideoSource=${encodeURIComponent(initialSource)}`,
         {
           method: 'GET',
           headers: {
@@ -186,10 +215,11 @@ const WidgetsPage: React.FC = () => {
       );
 
       if (!response.ok) {
-        throw new Error(`Failed to fetch filtered data for ${collectionName}`);
+        throw new Error(`Failed to fetch data for ${collectionName}`);
       }
 
       const data = await response.json();
+      console.log('Collection data:', data);
       setFilteredData(data);
       setExpandedCard({ collectionName, videoSource: initialSource });
 
@@ -248,9 +278,8 @@ const WidgetsPage: React.FC = () => {
     if (!expandedCard?.collectionName) return;
     
     try {
-      // Fetch new data with the selected video source
       const response = await fetch(
-        `${API_URL}/api/v1/Collection/filtered/count?collection=${expandedCard.collectionName}&VideoSource=${source}`,
+        `${API_URL}/api/v1/Collection/data?collectionName=${encodeURIComponent(expandedCard.collectionName)}&VideoSource=${encodeURIComponent(source)}`,
         {
           method: 'GET',
           headers: {
@@ -262,16 +291,17 @@ const WidgetsPage: React.FC = () => {
       );
 
       if (!response.ok) {
-        throw new Error(`Failed to fetch filtered data for ${expandedCard.collectionName}`);
+        throw new Error(`Failed to fetch data for ${expandedCard.collectionName}`);
       }
 
       const data = await response.json();
+      console.log('Updated collection data:', data);
       setFilteredData(data);
       setExpandedCard(prev => prev ? { ...prev, videoSource: source } : null);
       setSelectedVideoSource(source);
 
     } catch (error) {
-      console.error('Error fetching filtered data:', error);
+      console.error('Error fetching data:', error);
       toast.error(`Failed to load data for video source ${source}`);
     }
   };
@@ -427,7 +457,7 @@ const WidgetsPage: React.FC = () => {
           </div>
         ) : (
           <div className="collections-grid">
-            {collectionsData.map((collectionName: string) => (
+            {Array.isArray(collectionsData) && collectionsData.map((collectionName: string) => (
               <div
                 key={collectionName}
                 className={`collection-card ${expandedCard?.collectionName === collectionName ? 'expanded' : ''}`}
@@ -461,11 +491,11 @@ const WidgetsPage: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* Field Counts - Remove click handlers and selection styling */}
+                    {/* Field Counts - Add null check for fieldCounts */}
                     <div className="field-counts">
                       <h4>Available Fields</h4>
                       <div className="fields-grid">
-                        {Object.entries(filteredData.fieldCounts).map(([field, count]) => (
+                        {filteredData.fieldCounts && Object.entries(filteredData.fieldCounts || {}).map(([field, count]) => (
                           <div
                             key={field}
                             className="field-item"

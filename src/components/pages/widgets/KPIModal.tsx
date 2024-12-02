@@ -1,6 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { VehicleStats } from '../../../data/vehicleData';
-import { useWidgets } from '../../../context/WidgetContext';
+import { 
+  KPIModalProps, 
+  CollectionData,
+  VehicleStatsData,
+  KPIFieldUpdate
+} from '../../../types/kpi';
 import './KPIModal.css';
 import { API_URL } from '../../../utils/config';
 import {
@@ -11,44 +16,89 @@ import {
   Person, Group, Groups, Business, Store,
   LocalShipping, DirectionsCar, FlightTakeoff, Train,
   Security, Shield, Gavel, VerifiedUser,
-  Notifications, Warning, Error, CheckCircle
+  Notifications, Warning, Error as ErrorIcon, CheckCircle
 } from '@mui/icons-material';
-import ReactDOMServer from 'react-dom/server';
+import { kpiApi } from '../../../api/kpiApi';
+import { toast } from 'react-hot-toast';
 
-interface KPIModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  selectedData: VehicleStats[];
-  onKPICreated?: () => void;
-}
+const CollectionIcon = () => (
+  <svg 
+    viewBox="0 0 24 24" 
+    className="collection-svg-icon" 
+    fill="none" 
+    stroke="currentColor"
+  >
+    <path 
+      d="M7 7h10a2 2 0 012 2v10a2 2 0 01-2 2H7a2 2 0 01-2-2V9a2 2 0 012-2z" 
+      strokeWidth="2" 
+      strokeLinecap="round" 
+      strokeLinejoin="round"
+    />
+    <path 
+      d="M5 5h10a2 2 0 012 2v10" 
+      strokeWidth="2" 
+      strokeLinecap="round" 
+      strokeLinejoin="round"
+      strokeDasharray="2 2"
+    />
+    <path 
+      d="M3 3h10a2 2 0 012 2v10" 
+      strokeWidth="2" 
+      strokeLinecap="round" 
+      strokeLinejoin="round"
+      strokeDasharray="2 2"
+      opacity="0.5"
+    />
+  </svg>
+);
 
+const VideoSourceIcon = () => (
+  <svg 
+    viewBox="0 0 24 24" 
+    className="video-source-svg-icon" 
+    fill="none" 
+    stroke="currentColor"
+  >
+    <path 
+      d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14v-4z" 
+      strokeWidth="2" 
+      strokeLinecap="round" 
+      strokeLinejoin="round"
+    />
+    <rect 
+      x="3" 
+      y="6" 
+      width="12" 
+      height="12" 
+      rx="2" 
+      ry="2" 
+      strokeWidth="2"
+    />
+    <circle 
+      cx="9" 
+      cy="12" 
+      r="1" 
+      fill="currentColor"
+    />
+  </svg>
+);
+
+// Update the KPIField interface
 interface KPIField {
   id: string;
   label: string;
   value: number;
-  color: string;
+  color: string;  // Make color required
+  size?: 'small' | 'medium' | 'large';
+  icon?: string;
   collection?: string;
   videoSource?: string;
-  apiEndpoint?: string;
-  icon?: string;
-  format?: string;
-  size?: string;
-  showAdvanced?: boolean;
-  customIcon?: React.ReactNode;
-}
-
-interface CollectionData {
-  collection: string;
-  fieldCounts: {
-    [key: string]: number;
-  };
+  showAdvanced?: boolean;  // Add showAdvanced property
 }
 
 const KPIModal: React.FC<KPIModalProps> = ({ isOpen, onClose, selectedData, onKPICreated }) => {
   const [kpiTitle, setKpiTitle] = useState('');
-  const [selectedColor, setSelectedColor] = useState('#ffffff');
   const [selectedKPIType, setSelectedKPIType] = useState<string>('modern');
-  const { addWidget } = useWidgets();
   const [kpiFields, setKpiFields] = useState<KPIField[]>([]);
   const [availableCollections, setAvailableCollections] = useState<string[]>([]);
   const [selectedCollection, setSelectedCollection] = useState<string>('');
@@ -57,6 +107,7 @@ const KPIModal: React.FC<KPIModalProps> = ({ isOpen, onClose, selectedData, onKP
   const [availableFields, setAvailableFields] = useState<{[key: string]: number}>({});
   const [realTimeValues, setRealTimeValues] = useState<{[key: string]: number}>({});
   const [graphTitle, setGraphTitle] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   // Initialize available fields from selectedData
   React.useEffect(() => {
@@ -68,10 +119,8 @@ const KPIModal: React.FC<KPIModalProps> = ({ isOpen, onClose, selectedData, onKP
             fields.push({
               id: `${data.vehicleType}-${key}-${Math.random()}`,
               label: key,
-              value: value,
-              color: getDefaultColor(key),
-              format: 'number',
-              size: 'medium'
+              value: value as number,
+              color: getDefaultColor(key)
             });
           });
         }
@@ -89,9 +138,12 @@ const KPIModal: React.FC<KPIModalProps> = ({ isOpen, onClose, selectedData, onKP
     }
   };
 
-  const handleFieldUpdate = (fieldId: string, updates: Partial<KPIField>) => {
+  const handleFieldUpdate = (fieldId: string, updates: KPIFieldUpdate) => {
     setKpiFields(prev => prev.map(field => 
-      field.id === fieldId ? { ...field, ...updates } : field
+      field.id === fieldId ? {
+        ...field,
+        ...updates
+      } : field
     ));
   };
 
@@ -99,79 +151,47 @@ const KPIModal: React.FC<KPIModalProps> = ({ isOpen, onClose, selectedData, onKP
     setKpiFields(prev => prev.filter(field => field.id !== fieldId));
   };
 
-  const formatOptions = [
-    { value: 'number', label: 'Number' },
-    { value: 'percentage', label: 'Percentage' },
-    { value: 'currency', label: 'Currency' }
-  ];
-
-  const sizeOptions = [
-    { value: 'small', label: 'Small' },
-    { value: 'medium', label: 'Medium' },
-    { value: 'large', label: 'Large' }
-  ];
-
   const kpiTypes = [
-    { 
-      type: 'material-elevated', 
-      label: 'Material Elevated', 
-      description: 'Clean, elevated material design' 
-    },
-    { 
-      type: 'material-filled', 
-      label: 'Material Filled', 
-      description: 'Bold, filled material design' 
-    },
     { type: 'modern', label: 'Modern Design', description: 'Clean and modern look' },
-    { type: 'compact', label: 'Compact View', description: 'Space-efficient design' },
-    { type: 'detailed', label: 'Detailed Stats', description: 'Comprehensive view' },
-    { type: 'minimal', label: 'Minimal Design', description: 'Simple and elegant' }
+    { type: 'gradient', label: 'Gradient Design', description: 'Smooth gradient with glass effect' },
+    { type: 'minimal', label: 'Minimal Design', description: 'Clean and simple layout' },
+    { type: 'neon', label: 'Neon Design', description: 'Vibrant neon effect' },
+    { type: 'dashboard', label: 'Dashboard Design', description: 'Professional dashboard style' }
   ];
 
-  const colorOptions = [
-    { 
-      mainColor: '#FFB5B5', // Light Red
-      shades: ['#FFD1D1', '#FFE3E3', '#FFF0F0']
-    },
-    { 
-      mainColor: '#B5E8FF', // Light Blue
-      shades: ['#D1F0FF', '#E3F6FF', '#F0FAFF']
-    },
-    { 
-      mainColor: '#B5FFD9', // Light Green
-      shades: ['#D1FFE7', '#E3FFF0', '#F0FFF6']
-    },
-    { 
-      mainColor: '#FFE5B5', // Light Orange
-      shades: ['#FFEED1', '#FFF4E3', '#FFF8F0']
-    },
-    { 
-      mainColor: '#E0B5FF', // Light Purple
-      shades: ['#EBD1FF', '#F2E3FF', '#F7F0FF']
-    }
-  ];
-
+  // Update the fetchFieldData function
   const fetchFieldData = async (field: KPIField) => {
-    if (!field.collection || !field.videoSource || !field.label) return;
+    // Create a compatible field object for the API
+    const apiField = {
+      id: field.id,
+      label: field.label,
+      value: field.value,
+      color: field.color || '#4f46e5',
+      collection: field.collection,
+      videoSource: field.videoSource
+    };
 
-    try {
-      const apiEndpoint = `${API_URL}/api/v1/Collection/filtered/count?collection=${field.collection}&VideoSource=${field.videoSource}&Rule=${field.label}`;
-      
-      const response = await fetch(apiEndpoint, {
+    // Update the URL parameters to match backend expectations
+    const response = await fetch(
+      `${API_URL}/api/v1/Collection/filtered?collection=${encodeURIComponent(field.collection || '')}&VideoSource=${encodeURIComponent(field.videoSource || '')}&Rule=${encodeURIComponent(field.label)}`,
+      {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        },
         credentials: 'include'
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        if (data.fieldCounts && data.fieldCounts[field.label] !== undefined) {
-          setRealTimeValues(prev => ({
-            ...prev,
-            [field.id]: data.fieldCounts[field.label]
-          }));
-        }
       }
-    } catch (error) {
-      console.error(`Error fetching data for field ${field.label}:`, error);
+    );
+
+    if (response.ok) {
+      const data = await response.json();
+      if (data && data.fieldCounts && data.fieldCounts[field.label] !== undefined) {
+        setRealTimeValues(prev => ({
+          ...prev,
+          [field.id]: data.fieldCounts[field.label]
+        }));
+      }
     }
   };
 
@@ -183,166 +203,69 @@ const KPIModal: React.FC<KPIModalProps> = ({ isOpen, onClose, selectedData, onKP
       fetchFieldData(field);
     });
 
-    // Set up interval for periodic updates
+    // Set up interval for updates
     const interval = setInterval(() => {
       kpiFields.forEach(field => {
-        fetchFieldData(field);
+        if (field.collection && field.videoSource) {
+          fetchFieldData(field);
+        }
       });
-    }, 5000); // Update every 5 seconds
+    }, 5000);
 
-    // Cleanup interval on unmount or when modal closes
     return () => clearInterval(interval);
-  }, [isOpen, kpiFields]); // Dependencies
+  }, [kpiFields, isOpen]);
 
-  const getPreviewContent = () => {
-    switch (selectedKPIType) {
-      case 'material-elevated':
-        return (
-          <div className="kpi-preview-material-elevated" style={{ background: selectedColor }}>
-            <div className="kpi-header">
-              <h3 className="kpi-title">{kpiTitle || 'KPI Title'}</h3>
-            </div>
-            <div className="kpi-fields">
-              {kpiFields.map((field) => (
-                <div 
-                  key={field.id} 
-                  className="kpi-field elevation-1"
-                >
-                  {field.customIcon && (
-                    <div className="field-icon">
-                      {field.customIcon}
-                    </div>
-                  )}
-                  <span className="field-label">{field.label}</span>
-                  <span className="field-value">
-                    {realTimeValues[field.id] !== undefined ? realTimeValues[field.id] : field.value}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        );
+  // Update the preview field rendering
+  const renderPreviewField = (field: KPIField) => {
+    // Find the icon component if one is specified
+    const iconComponent = field.icon ? 
+      iconOptions
+        .flatMap(category => category.icons)
+        .find(i => i.name === field.icon)?.icon 
+      : null;
 
-      case 'material-filled':
-        return (
-          <div className="kpi-preview-material-filled" style={{ background: selectedColor }}>
-            <div className="kpi-header">
-              <h3 className="kpi-title">{kpiTitle || 'KPI Title'}</h3>
-            </div>
-            <div className="kpi-fields">
-              {kpiFields.map((field) => (
-                <div 
-                  key={field.id} 
-                  className="kpi-field"
-                >
-                  {field.customIcon && (
-                    <div className="field-icon">
-                      {field.customIcon}
-                    </div>
-                  )}
-                  <span className="field-label">{field.label}</span>
-                  <span className="field-value">
-                    {realTimeValues[field.id] !== undefined ? realTimeValues[field.id] : field.value}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        );
+    // Convert the field value to a string or number
+    const displayValue = realTimeValues[field.id] !== undefined 
+      ? realTimeValues[field.id].toString()
+      : field.value.toString();
 
-      case 'modern':
-        return (
-          <div className="kpi-preview-modern" style={{ background: selectedColor }}>
-            <h3>{kpiTitle || 'KPI Title'}</h3>
-            <div className="kpi-fields-grid">
-              {kpiFields.map((field) => (
-                <div 
-                  key={field.id} 
-                  className="kpi-field"
-                  style={{ 
-                    color: field.color,
-                    fontSize: getSizeStyle(field.size || 'medium')
-                  }}
-                >
-                  {field.customIcon && (
-                    <div className="field-icon">
-                      {field.customIcon}
-                    </div>
-                  )}
-                  <span className="field-label">{field.label}</span>
-                  <span className="field-value" style={{ 
-                    fontSize: getSizeStyle(field.size || 'medium'),
-                  }}>
-                    {realTimeValues[field.id] !== undefined ? realTimeValues[field.id] : field.value}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        );
-
-      case 'compact':
-        return (
-          <div className="kpi-preview-compact" style={{ background: selectedColor }}>
-            <div className="compact-header">
-              <h4>{kpiTitle || 'KPI Title'}</h4>
-            </div>
-            <div className="compact-fields">
-              {kpiFields.map((field, index) => (
-                <div key={index} className="compact-field" style={{ color: field.color }}>
-                  <span className="field-value">{field.value}</span>
-                  <span className="field-label">{field.label}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        );
-
-      case 'detailed':
-        return (
-          <div className="kpi-preview-detailed" style={{ background: selectedColor }}>
-            <div className="detailed-header">
-              <h3>{kpiTitle || 'KPI Title'}</h3>
-              <span className="last-updated">Last Updated: {new Date().toLocaleString()}</span>
-            </div>
-            <div className="detailed-fields">
-              {kpiFields.map((field, index) => (
-                <div key={index} className="detailed-field">
-                  <div className="field-header" style={{ color: field.color }}>
-                    {field.icon && <span className="field-icon">{field.icon}</span>}
-                    <span className="field-label">{field.label}</span>
-                  </div>
-                  <div className="field-value" style={{ color: field.color }}>
-                    {field.value}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        );
-
-      case 'minimal':
-        return (
-          <div className="kpi-preview-minimal" style={{ background: selectedColor }}>
-            <div className="minimal-content">
-              {kpiFields.map((field, index) => (
-                <div key={index} className="minimal-field">
-                  <span className="field-label" style={{ color: field.color }}>
-                    {field.label}
-                  </span>
-                  <span className="field-value">
-                    {field.value}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        );
-
-      default:
-        return null;
-    }
+    return (
+      <div 
+        key={field.id} 
+        className={`kpi-field ${field.size || 'medium'}`}
+        style={{ color: field.color }}
+      >
+        {iconComponent && <div className="field-icon">{iconComponent}</div>}
+        <div className="field-value">{displayValue}</div>
+        <div className="field-label">{field.label}</div>
+      </div>
+    );
   };
+
+  // Update the field selection rendering
+  const renderSelectionField = (fieldName: string, value: number) => (
+    <div className="field-content">
+      <div className="field-name">{String(fieldName)}</div>
+      <div className="field-count">
+        <span className="count-value">{String(value)}</span>
+        <span className="count-label">entries</span>
+      </div>
+    </div>
+  );
+
+  // Update the preview content section
+  const getPreviewContent = () => (
+    <div className={`kpi-preview-${selectedKPIType}`}>
+      <div className="kpi-main-content">
+        <div className="kpi-header">
+          <h3 className="kpi-title">{kpiTitle || 'KPI Card'}</h3>
+        </div>
+        <div className="kpi-fields-container">
+          {kpiFields.map(field => renderPreviewField(field))}
+        </div>
+      </div>
+    </div>
+  );
 
   const getSizeStyle = (size: string): string => {
     switch (size) {
@@ -352,134 +275,154 @@ const KPIModal: React.FC<KPIModalProps> = ({ isOpen, onClose, selectedData, onKP
     }
   };
 
-  // Update the handleCreateKPI function with fixed icon content logic
-  const handleCreateKPI = () => {
+  // Update the handleCreateKPI function
+  const handleCreateKPI = async () => {
     const widgetId = `kpi-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-    // Create widget content with icon support
-    const kpiContent = `
-      <div class="kpi-widget kpi-${selectedKPIType}" style="background-color: ${selectedColor};" id="${widgetId}">
+    // Format data for KPI collection
+    const kpiCardData = {
+      kpi_id: widgetId,
+      kpi_name: kpiTitle || 'Vehicle Statistics',
+      kpi_type: 'kpi',
+      design_type: selectedKPIType,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      fields: kpiFields.map(field => ({
+        field_id: field.id,
+        field_name: field.label,
+        field_value: field.value,
+        collection_name: field.collection || selectedData[0]?.vehicleType,
+        video_source: field.videoSource || selectedData[0]?.filteredStats?.VideoSource,
+        rule_name: field.label,
+        styling: {
+          color: field.color,
+          size: field.size || 'medium',
+          icon: field.icon
+        }
+      })),
+      config: {
+        refresh_interval: 5000,
+        layout: {
+          columns: 2,
+          gap: '1rem'
+        }
+      }
+    };
+
+    try {
+      // Send to VYU API
+      const response = await fetch(`${API_URL}/api/v1/kpiCards`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        credentials: 'include',
+        body: JSON.stringify(kpiCardData)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        console.error('Server error details:', errorData);
+        throw new Error('Failed to save KPI card');
+      }
+
+      const savedCard = await response.json();
+      console.log('KPI Card saved successfully:', savedCard);
+
+      // Close modal and notify parent
+      onClose();
+      onKPICreated?.();
+    } catch (error) {
+      console.error('Error saving KPI card:', error);
+      // Just close the modal on error
+      onClose();
+      onKPICreated?.();
+    }
+  };
+
+  // Helper function to generate KPI content
+  const generateKPIContent = (widgetId: string, fields: KPIField[]) => {
+    return `
+      <div class="kpi-widget kpi-${selectedKPIType}" id="${widgetId}">
         <div class="kpi-header">
           <h3 class="kpi-title">${kpiTitle || 'Vehicle Statistics'}</h3>
         </div>
         <div class="kpi-fields">
-          ${kpiFields.map(field => {
+          ${fields.map(field => {
             const collection = field.collection || selectedData[0]?.vehicleType;
             const videoSource = field.videoSource || selectedData[0]?.filteredStats?.VideoSource;
             
-            // Convert React icon component to SVG string
-            const iconContent = field.customIcon 
-              ? (React.isValidElement(field.customIcon) 
-                  ? ReactDOMServer.renderToString(field.customIcon)
-                  : field.customIcon)
-              : '';
-
             return `
               <div 
-                class="kpi-field ${selectedKPIType === 'material-elevated' ? 'elevation-1' : ''}" 
+                class="kpi-field ${field.size || 'medium'}"
                 data-field-id="${field.id}"
                 data-type="${field.label}"
                 data-collection="${collection}"
                 data-video-source="${videoSource}"
                 style="color: ${field.color};"
               >
-                ${iconContent ? `
-                  <div class="field-icon">
-                    ${iconContent}
-                  </div>
-                ` : ''}
-                <div class="field-label">${field.label}</div>
+                ${field.icon ? `<div class="field-icon">${field.icon}</div>` : ''}
                 <div class="field-value">
                   ${field.value}
                 </div>
+                <div class="field-label">${field.label}</div>
               </div>
             `;
           }).join('')}
         </div>
       </div>
     `;
-
-    // Create the widget object with icon data
-    const newWidget = {
-      type: 'kpi' as const,
-      id: widgetId,
-      title: kpiTitle || 'Vehicle Statistics',
-      content: kpiContent,
-      backgroundColor: selectedColor,
-      fields: kpiFields.map(field => ({
-        ...field,
-        collection: field.collection || selectedData[0]?.vehicleType,
-        videoSource: field.videoSource || selectedData[0]?.filteredStats?.VideoSource,
-        // Preserve icon information
-        icon: field.icon,
-        customIcon: field.customIcon ? 
-          React.isValidElement(field.customIcon) ?
-            ReactDOMServer.renderToString(field.customIcon) :
-            field.customIcon
-          : undefined
-      }))
-    };
-
-    addWidget(newWidget);
-    onClose();
-    onKPICreated?.();
   };
 
   const fetchCollections = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/v1/allCollections`, {
-        credentials: 'include'
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setAvailableCollections(data.collections);
-      }
+      setIsLoading(true);
+      console.log('Fetching collections...');
+      const collections = await kpiApi.fetchCollections();
+      console.log('Received collections:', collections);
+      setAvailableCollections(collections);
     } catch (error) {
-      console.error('Error fetching collections:', error);
+      console.error('Failed to fetch collections:', error);
+      toast.error('Failed to fetch collections');
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const fetchVideoSources = async (collection: string) => {
     try {
-      const response = await fetch(
-        `${API_URL}/api/v1/Collection/videoSources?collection=${collection}`,
-        { credentials: 'include' }
-      );
-      if (response.ok) {
-        const data = await response.json();
-        setAvailableVideoSources(data.videoSources.map((vs: any) => vs.source));
-      }
+      setIsLoading(true);
+      console.log('Fetching video sources for collection:', collection);
+      const sources = await kpiApi.fetchVideoSources(collection);
+      console.log('Received video sources:', sources);
+      setAvailableVideoSources(sources);
     } catch (error) {
-      console.error('Error fetching video sources:', error);
+      console.error('Failed to fetch video sources:', error);
+      toast.error('Failed to fetch video sources. Please check server connection.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const fetchFields = async (collection: string, videoSource: string) => {
     try {
-      const response = await fetch(
-        `${API_URL}/api/v1/Collection/filtered/count?collection=${collection}&VideoSource=${videoSource}`,
-        { credentials: 'include' }
-      );
-      if (response.ok) {
-        const data: CollectionData = await response.json();
-        setAvailableFields(data.fieldCounts);
-      }
+      setIsLoading(true);
+      console.log('Fetching fields for:', { collection, videoSource });
+      const fields = await kpiApi.fetchFields(collection, videoSource);
+      console.log('Received fields:', fields);
+      setAvailableFields(fields);
     } catch (error) {
-      console.error('Error fetching fields:', error);
+      console.error('Failed to fetch fields:', error);
+      toast.error('Failed to fetch fields. Please check server connection.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
   useEffect(() => {
     fetchCollections();
   }, []);
-
-  const toggleFieldAdvanced = (fieldId: string) => {
-    setKpiFields(prev => prev.map(field => 
-      field.id === fieldId 
-        ? { ...field, showAdvanced: !field.showAdvanced || false }
-        : field
-    ));
-  };
 
   const iconOptions = [
     { category: 'Analytics', icons: [
@@ -525,28 +468,67 @@ const KPIModal: React.FC<KPIModalProps> = ({ isOpen, onClose, selectedData, onKP
     { category: 'Alerts', icons: [
       { icon: <Notifications />, name: 'Notification' },
       { icon: <Warning />, name: 'Warning' },
-      { icon: <Error />, name: 'Error' },
+      { icon: <ErrorIcon />, name: 'Error' },
       { icon: <CheckCircle />, name: 'Success' }
     ]}
   ];
 
-  const handleColorSelect = (color: string) => {
-    setSelectedColor(color);
-    
-    // Add active class to trigger rotation animation
-    const wheel = document.querySelector('.color-wheel');
-    const centerCircle = document.querySelector('.center-circle');
-    
-    if (wheel && centerCircle) {
-      wheel.classList.add('active');
-      centerCircle.classList.add('active');
-      
-      setTimeout(() => {
-        wheel.classList.remove('active');
-        centerCircle.classList.remove('active');
-      }, 1000);
+  // Update the handleFieldSelection function
+  const handleFieldSelection = (fieldName: string, value: number) => {
+    if (kpiFields.some(f => f.label === fieldName)) {
+      setKpiFields(prev => prev.filter(f => f.label !== fieldName));
+      return;
     }
+
+    const newField: KPIField = {
+      id: `${selectedCollection}-${fieldName}-${Math.random()}`,
+      label: fieldName,
+      value: Number(value) || 0,
+      color: getDefaultColor(fieldName),
+      collection: selectedCollection,
+      videoSource: selectedVideoSource,
+      size: 'medium',
+      showAdvanced: false  // Initialize showAdvanced
+    };
+
+    console.log('Adding new field:', newField);
+    setKpiFields(prev => [...prev, newField]);
   };
+
+  // Update the field selection UI
+  const FieldSelection = () => (
+    <div className="selection-group">
+      <h4>Select Fields</h4>
+      <div className="fields-grid">
+        {Object.entries(availableFields).map(([fieldName, value]) => (
+          <div
+            key={fieldName}
+            className={`field-item ${kpiFields.some(f => f.label === fieldName) ? 'selected' : ''}`}
+            onClick={() => handleFieldSelection(fieldName, value)}
+          >
+            {renderSelectionField(fieldName, value)}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
+  // Add useEffect to monitor state changes
+  useEffect(() => {
+    console.log('Selected collection changed:', selectedCollection);
+  }, [selectedCollection]);
+
+  useEffect(() => {
+    console.log('Available video sources changed:', availableVideoSources);
+  }, [availableVideoSources]);
+
+  useEffect(() => {
+    console.log('Selected video source changed:', selectedVideoSource);
+  }, [selectedVideoSource]);
+
+  useEffect(() => {
+    console.log('Available fields changed:', availableFields);
+  }, [availableFields]);
 
   if (!isOpen) return null;
 
@@ -588,109 +570,161 @@ const KPIModal: React.FC<KPIModalProps> = ({ isOpen, onClose, selectedData, onKP
             </div>
           </div>
 
-          {/* Field Configuration */}
-          <div className="config-section field-config">
-            <div className="section-header">
-              <h3>Configure Fields</h3>
-            </div>
-
-            {/* Data Selection Flow */}
+          {/* Field Configuration with Data Selection */}
+          <div className="config-section">
+            <h3>Data Selection</h3>
             <div className="data-selection-flow">
               {/* Collection Selection */}
               <div className="selection-group">
                 <h4>Select Collection</h4>
-                <div className="collection-buttons">
-                  {availableCollections.map(collection => (
-                    <button
-                      key={collection}
-                      className={`selection-button ${selectedCollection === collection ? 'selected' : ''}`}
-                      onClick={() => {
-                        setSelectedCollection(collection);
-                        fetchVideoSources(collection);
-                      }}
-                    >
-                      {collection}
-                    </button>
-                  ))}
-                </div>
+                {isLoading ? (
+                  <div className="loading">Loading collections...</div>
+                ) : (
+                  <div className="collection-buttons">
+                    {availableCollections.map(collection => (
+                      <button
+                        key={collection}
+                        className={`collection-btn ${selectedCollection === collection ? 'selected' : ''}`}
+                        onClick={() => {
+                          console.log('Selecting collection:', collection);
+                          setSelectedCollection(collection);
+                          setSelectedVideoSource(''); // Reset video source when collection changes
+                          setAvailableFields({}); // Reset fields
+                          fetchVideoSources(collection);
+                        }}
+                      >
+                        <div className="collection-content">
+                          <div className="collection-icon">
+                            <CollectionIcon />
+                          </div>
+                          <div className="collection-info">
+                            <span className="collection-name">{collection}</span>
+                            {selectedCollection === collection && (
+                              <span className="collection-status">Selected</span>
+                            )}
+                          </div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Video Source Selection */}
               {selectedCollection && (
                 <div className="selection-group">
                   <h4>Select Video Source</h4>
-                  <div className="source-buttons">
-                    {availableVideoSources.map(source => (
-                      <button
-                        key={source}
-                        className={`selection-button ${selectedVideoSource === source ? 'selected' : ''}`}
-                        onClick={() => {
-                          setSelectedVideoSource(source);
-                          fetchFields(selectedCollection, source);
-                        }}
-                      >
-                        Source {source}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Field Selection */}
-              {Object.keys(availableFields).length > 0 && (
-                <div className="selection-group">
-                  <h4>Select Fields</h4>
-                  <div className="fields-grid">
-                    {Object.entries(availableFields).map(([field, value]) => (
-                      <div
-                        key={field}
-                        className={`field-item ${kpiFields.some(f => f.label === field) ? 'selected' : ''}`}
-                        onClick={() => {
-                          const fieldId = `${selectedCollection}-${field}-${Date.now()}`;
-                          const newField: KPIField = {
-                            id: fieldId,
-                            label: field,
-                            value: value,
-                            color: getDefaultColor(field),
-                            collection: selectedCollection,
-                            videoSource: selectedVideoSource,
-                            apiEndpoint: `${API_URL}/api/v1/Collection/filtered/count?collection=${selectedCollection}&Rule=${field}&VideoSource=${selectedVideoSource}`,
-                            format: 'number',
-                            size: 'medium'
-                          };
-                          setKpiFields(prev => [...prev, newField]);
-                        }}
-                      >
-                        <div className="field-name">{field}</div>
-                        <div className="field-count">{value}</div>
-                      </div>
-                    ))}
-                  </div>
+                  {isLoading ? (
+                    <div className="loading">Loading video sources...</div>
+                  ) : (
+                    <div className="source-buttons">
+                      {availableVideoSources.map((source) => (
+                        <div
+                          key={source}
+                          className={`source-btn ${selectedVideoSource === source ? 'selected' : ''}`}
+                          onClick={() => {
+                            console.log('Selected video source:', source);
+                            setSelectedVideoSource(source);
+                            fetchFields(selectedCollection, source);
+                          }}
+                        >
+                          <div className="source-content">
+                            <div className="source-icon">
+                              <VideoSourceIcon />
+                            </div>
+                            <div className="source-info">
+                              <span className="source-number">Source {source}</span>
+                              <span className="source-status">Active</span>
+                            </div>
+                          </div>
+                          {selectedVideoSource === source && (
+                            <div className="source-indicator">
+                              <div className="pulse-dot"></div>
+                              <span>Selected</span>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
+          </div>
 
-            {/* Field Styling Configuration */}
-            <div className="fields-config">
-              {kpiFields.map((field) => (
-                <div key={field.id} className="field-config-item">
-                  <div className="field-main">
+          {/* Separate section for field selection and configuration */}
+          {selectedCollection && selectedVideoSource && (
+            <div className="config-section">
+              <h3>Available Fields</h3>
+              {isLoading ? (
+                <div className="loading">Loading fields...</div>
+              ) : Object.keys(availableFields).length > 0 ? (
+                <div className="fields-selection-grid">
+                  {Object.entries(availableFields).map(([fieldName, value]) => (
+                    <div
+                      key={fieldName}
+                      className={`field-selection-card ${kpiFields.some(f => f.label === fieldName) ? 'selected' : ''}`}
+                      onClick={() => {
+                        console.log('Selected field:', fieldName, 'value:', value);
+                        handleFieldSelection(fieldName, value);
+                      }}
+                    >
+                      <div className="field-card-content">
+                        <div className="field-card-header">
+                          <span className="field-card-name">{fieldName}</span>
+                          {kpiFields.some(f => f.label === fieldName) && (
+                            <span className="field-selected-badge">Selected</span>
+                          )}
+                        </div>
+                        <div className="field-card-value">
+                          <span className="value-number">{value}</span>
+                          <span className="value-label">Current Count</span>
+                        </div>
+                        <div className="field-card-footer">
+                          <button 
+                            className="select-field-btn"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleFieldSelection(fieldName, value);
+                            }}
+                          >
+                            {kpiFields.some(f => f.label === fieldName) ? 'Remove' : 'Select Field'}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="no-fields">No fields available for this source</div>
+              )}
+            </div>
+          )}
+
+          {/* Selected Fields Configuration */}
+          {kpiFields.length > 0 && (
+            <div className="config-section">
+              <h3>Selected Fields Configuration</h3>
+              <div className="selected-fields-config">
+                {kpiFields.map((field) => (
+                  <div key={field.id} className="field-config-item">
                     <div className="field-header">
-                      <input
-                        type="text"
-                        value={field.label}
-                        onChange={(e) => handleFieldUpdate(field.id, { label: e.target.value })}
-                        placeholder="Field Label"
-                        className="field-label-input"
-                      />
+                      <div className="field-info">
+                        <span className="field-name">{field.label}</span>
+                        <span className="field-value">
+                          {realTimeValues[field.id] !== undefined ? realTimeValues[field.id] : field.value}
+                        </span>
+                      </div>
                       <div className="field-actions">
                         <button 
                           className="field-action-btn"
-                          onClick={() => toggleFieldAdvanced(field.id)}
+                          onClick={() => setKpiFields(prev => prev.map(f => 
+                            f.id === field.id ? { ...f, showAdvanced: !f.showAdvanced } : f
+                          ))}
                         >
-                          <span className="icon">⚙️</span>
+                          ⚙️
                         </button>
-                        <button
+                        <button 
                           className="field-action-btn remove"
                           onClick={() => handleRemoveField(field.id)}
                         >
@@ -701,147 +735,67 @@ const KPIModal: React.FC<KPIModalProps> = ({ isOpen, onClose, selectedData, onKP
 
                     {field.showAdvanced && (
                       <div className="field-advanced">
+                        {/* Field styling options */}
                         <div className="style-section">
                           <h5>Appearance</h5>
                           <div className="style-options">
+                            {/* Size selection */}
                             <div className="style-group">
                               <label>Size</label>
                               <select
-                                value={field.size}
-                                onChange={(e) => handleFieldUpdate(field.id, { size: e.target.value })}
+                                value={field.size || 'medium'}
+                                onChange={(e) => handleFieldUpdate(field.id, { 
+                                  size: e.target.value as 'small' | 'medium' | 'large' 
+                                })}
                               >
-                                {sizeOptions.map(option => (
-                                  <option key={option.value} value={option.value}>
-                                    {option.label}
-                                  </option>
-                                ))}
+                                <option value="small">Small</option>
+                                <option value="medium">Medium</option>
+                                <option value="large">Large</option>
                               </select>
                             </div>
 
-                            <div className="style-group">
-                              <label>Format</label>
-                              <select
-                                value={field.format}
-                                onChange={(e) => handleFieldUpdate(field.id, { format: e.target.value })}
-                              >
-                                {formatOptions.map(option => (
-                                  <option key={option.value} value={option.value}>
-                                    {option.label}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-
+                            {/* Color selection */}
                             <div className="style-group">
                               <label>Color</label>
-                              <div className="color-picker">
-                                <input
-                                  type="color"
-                                  value={field.color}
-                                  onChange={(e) => handleFieldUpdate(field.id, { color: e.target.value })}
-                                />
-                                <span className="color-preview" style={{ background: field.color }} />
-                              </div>
+                              <input
+                                type="color"
+                                value={field.color}
+                                onChange={(e) => handleFieldUpdate(field.id, { color: e.target.value })}
+                              />
                             </div>
 
-                            <div className="style-group icon-selection">
+                            {/* Icon selection */}
+                            <div className="style-group">
                               <label>Icon</label>
                               <div className="icon-selector">
-                                {iconOptions.map((category) => (
-                                  <div key={category.category} className="icon-category-section">
-                                    {category.icons.map((iconOption) => (
+                                {iconOptions.map(category => (
+                                  <div key={category.category} className="icon-category">
+                                    {category.icons.map(icon => (
                                       <button
-                                        key={iconOption.name}
-                                        className={`icon-option ${field.icon === iconOption.name ? 'selected' : ''}`}
-                                        onClick={() => handleFieldUpdate(field.id, { 
-                                          icon: iconOption.name,
-                                          customIcon: iconOption.icon 
+                                        key={icon.name}
+                                        className={`icon-option ${field.icon === icon.name ? 'selected' : ''}`}
+                                        onClick={() => handleFieldUpdate(field.id, {
+                                          icon: icon.name,
+                                          customIcon: icon.icon
                                         })}
-                                        title={iconOption.name}
+                                        title={icon.name}
                                       >
-                                        {iconOption.icon}
+                                        {icon.icon}
                                       </button>
                                     ))}
                                   </div>
                                 ))}
                               </div>
-                              <div className="custom-icon-upload">
-                                <button 
-                                  className="custom-icon-button"
-                                  onClick={() => {
-                                    const input = document.createElement('input');
-                                    input.type = 'file';
-                                    input.accept = 'image/svg+xml,image/png';
-                                    input.onchange = (e) => {
-                                      const file = (e.target as HTMLInputElement).files?.[0];
-                                      if (file) {
-                                        const reader = new FileReader();
-                                        reader.onload = (e) => {
-                                          const result = e.target?.result;
-                                          if (typeof result === 'string') {
-                                            handleFieldUpdate(field.id, { 
-                                              icon: 'custom',
-                                              customIcon: <img src={result} alt="Custom icon" style={{ width: '20px', height: '20px' }} />
-                                            });
-                                          }
-                                        };
-                                        reader.readAsDataURL(file);
-                                      }
-                                    };
-                                    input.click();
-                                  }}
-                                >
-                                  Upload Custom Icon
-                                </button>
-                                {field.icon === 'custom' && field.customIcon && (
-                                  <div className="custom-icon-preview">
-                                    {field.customIcon}
-                                  </div>
-                                )}
-                              </div>
                             </div>
-                          </div>
-                        </div>
-
-                        <div className="animation-section">
-                          <h5>Animation</h5>
-                          <div className="animation-options">
-                            {/* Add animation options */}
                           </div>
                         </div>
                       </div>
                     )}
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
-
-          {/* Color Selection */}
-          <div className="color-selection-section">
-            <h3>Background Color</h3>
-            <div className="color-cards">
-              {colorOptions.map((card) => (
-                <div key={card.mainColor} className="color-card">
-                  <div
-                    className="main-color"
-                    style={{ background: card.mainColor }}
-                    onClick={() => setSelectedColor(card.mainColor)}
-                  />
-                  <div className="color-shades">
-                    {card.shades.map((shade, index) => (
-                      <div
-                        key={index}
-                        className="shade"
-                        style={{ background: shade }}
-                        onClick={() => setSelectedColor(shade)}
-                      />
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+          )}
 
           {/* Preview Section */}
           <div className="config-section">
