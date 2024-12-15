@@ -1,4 +1,14 @@
 // Data structure interfaces
+interface RuleCount {
+  Rule: string;
+  Count: number;
+}
+
+interface SourceData {
+  VideoSource: string;
+  rules: RuleCount[];
+}
+
 interface RuleCounts {
   [key: string]: number;
 }
@@ -9,7 +19,13 @@ interface FilteredStats {
 }
 
 export interface VehicleStatsData {
-  vehicleType: string;
+  // New structure
+  collection?: string;
+  sourceData?: SourceData[];
+  fieldCounts?: { [key: string]: number };
+  
+  // Old structure
+  vehicleType?: string;
   filteredStats?: FilteredStats;
 }
 
@@ -24,6 +40,7 @@ export interface KPIField {
   icon?: string;
   customIcon?: JSX.Element;
   showAdvanced?: boolean;
+  ruleCounts?: RuleCount[];
 }
 
 export interface KPIFieldUpdate {
@@ -50,4 +67,4 @@ export interface KPIModalProps {
   onClose: () => void;
   selectedData: VehicleStatsData[];
   onKPICreated?: () => void;
-} 
+}

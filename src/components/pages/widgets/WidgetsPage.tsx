@@ -22,6 +22,12 @@ interface FilteredData {
   filter: {
     VideoSource: string;
   };
+  data: Array<{
+    Rule: string;
+    Count: number;
+    VideoSource: string;
+    LastUpdated?: string;
+  }>;
   fieldCounts: {
     [key: string]: number;
   };
@@ -57,7 +63,7 @@ interface VideoSourceResponse {
   total: number;
 }
 
-const WidgetsPage: React.FC = () => {
+const WidgetsPage: React.FC = (): React.ReactElement => {
   const [isGraphModalOpen, setIsGraphModalOpen] = useState(false);
   const [isKPIModalOpen, setIsKPIModalOpen] = useState(false);
   const [collectionsData, setCollectionsData] = useState<string[]>([]);
@@ -173,37 +179,62 @@ const WidgetsPage: React.FC = () => {
         return;
       }
 
-      // Fetch video sources first
-      const sourcesResponse = await fetch(
-        `${API_URL}/api/v1/Collection/videoSources?collection=${encodeURIComponent(collectionName)}`,
-        {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-          },
-          credentials: 'include',
-        }
-      );
+      // First fetch video sources and collection data simultaneously
+      const [sourcesResponse, collectionResponse] = await Promise.all([
+        fetch(
+          `${API_URL}/api/v1/Collection/videoSources?collection=${encodeURIComponent(collectionName)}`,
+          {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+            },
+            credentials: 'include',
+          }
+        ),
+        fetch(
+          `${API_URL}/api/v1/Collection/filtered/count?collection=${encodeURIComponent(collectionName)}`,
+          {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+            },
+            credentials: 'include',
+          }
+        )
+      ]);
 
-      if (!sourcesResponse.ok) {
-        throw new Error(`Failed to fetch video sources for ${collectionName}`);
+      if (!sourcesResponse.ok || !collectionResponse.ok) {
+        throw new Error(`Failed to fetch data for ${collectionName}`);
       }
 
-      const sourcesData = await sourcesResponse.json();
+      const [sourcesData, collectionData] = await Promise.all([
+        sourcesResponse.json(),
+        collectionResponse.json()
+      ]);
+
       console.log('Video sources data:', sourcesData);
+      console.log('Collection data:', collectionData);
       
-      // Extract and set video sources
-      const sources = sourcesData.videoSources.map((vs: any) => vs.source).filter(Boolean);
-      setAvailableVideoSources(sources);
+        // Extract sources from the response
+        const sources = sourcesData.videoSources ? sourcesData.videoSources.map((vs: any) => vs.source) : [];
       
-      // Use the first video source or default to '1'
-      const initialSource = sources[0] || '1';
+        // Get all unique video sources from both collection and sources data
+        const uniqueSources = Array.from(new Set([
+        ...sources,
+        ...(collectionData.data ? collectionData.data.map((item: any) => item.VideoSource) : [])
+        ]));
+
+      setAvailableVideoSources(uniqueSources);
+      
+      // Use the first video source from the combined sources
+      const initialSource = uniqueSources[0] || '1';
       setSelectedVideoSource(initialSource);
       
-      // Fetch collection data
-      const response = await fetch(
-        `${API_URL}/api/v1/Collection/data?collectionName=${encodeURIComponent(collectionName)}&VideoSource=${encodeURIComponent(initialSource)}`,
+        // Fetch rule counts for the selected source
+        const response = await fetch(
+        `${API_URL}/api/v1/Collection/filtered/count?collection=${encodeURIComponent(collectionName)}&VideoSource=${encodeURIComponent(initialSource)}`,
         {
           method: 'GET',
           headers: {
@@ -218,10 +249,26 @@ const WidgetsPage: React.FC = () => {
         throw new Error(`Failed to fetch data for ${collectionName}`);
       }
 
-      const data = await response.json();
-      console.log('Collection data:', data);
-      setFilteredData(data);
-      setExpandedCard({ collectionName, videoSource: initialSource });
+        const data = await response.json();
+        console.log('Collection data:', data);
+        console.log('Field counts:', data.fieldCounts); // Debug log for field counts
+        
+        // Ensure we have valid field counts data
+        if (data && typeof data === 'object') {
+          // Transform the data if needed
+          const processedData: FilteredData = {
+          collection: collectionName,
+          filter: {
+            VideoSource: initialSource
+          },
+          data: data.data || [],
+          fieldCounts: data.fieldCounts || {}
+          };
+          setFilteredData(processedData);
+          setExpandedCard({ collectionName, videoSource: initialSource });
+        } else {
+          throw new Error('Invalid data format received from server');
+        }
 
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -274,12 +321,13 @@ const WidgetsPage: React.FC = () => {
     });
   };
 
-  const handleVideoSourceChange = async (source: string) => {
+  const handleVideoSourceChange = async (source: string, e: React.MouseEvent) => {
+    e.stopPropagation();
     if (!expandedCard?.collectionName) return;
     
     try {
       const response = await fetch(
-        `${API_URL}/api/v1/Collection/data?collectionName=${encodeURIComponent(expandedCard.collectionName)}&VideoSource=${encodeURIComponent(source)}`,
+        `${API_URL}/api/v1/Collection/filtered/count?collection=${encodeURIComponent(expandedCard.collectionName)}&VideoSource=${encodeURIComponent(source)}`,
         {
           method: 'GET',
           headers: {
@@ -296,10 +344,43 @@ const WidgetsPage: React.FC = () => {
 
       const data = await response.json();
       console.log('Updated collection data:', data);
-      setFilteredData(data);
-      setExpandedCard(prev => prev ? { ...prev, videoSource: source } : null);
-      setSelectedVideoSource(source);
+      console.log('Updated field counts:', data.fieldCounts);
+      
+      // Update the filtered data with the new source's data
+      if (data && typeof data === 'object') {
+        // Transform the data to include both rule counts and rule details
+        const processedData: FilteredData = {
+          collection: expandedCard.collectionName,
+          filter: {
+            VideoSource: source
+          },
+          data: Array.isArray(data.data) ? data.data.map((item: any) => ({
+            Rule: item.Rule || '',
+            Count: item.Count || 0,
+            VideoSource: source,
+            LastUpdated: item.LastUpdated || new Date().toISOString()
+          })) : [],
+          fieldCounts: data.fieldCounts || {}
+        };
 
+        setFilteredData(processedData);
+        setExpandedCard(prev => prev ? { ...prev, videoSource: source } : null);
+        setSelectedVideoSource(source);
+
+        // Show the updated data in a toast notification
+        if (data.fieldCounts) {
+          const totalCount = Object.values(data.fieldCounts).reduce<number>(
+            (sum, count) => sum + (typeof count === 'number' ? count : 0), 
+            0
+          );
+          toast.info(`Source ${source} Total Count: ${totalCount}`, {
+            position: "top-right",
+            autoClose: 3000
+          });
+        }
+      } else {
+        throw new Error('Invalid data format received from server');
+      }
     } catch (error) {
       console.error('Error fetching data:', error);
       toast.error(`Failed to load data for video source ${source}`);
@@ -443,8 +524,8 @@ const WidgetsPage: React.FC = () => {
       <ToastContainer />
       <h1>Widgets</h1>
 
-      <div className="data-selection-section">
-        <h2>Collections</h2>
+        <div className="data-selection-section">
+
         {isLoading ? (
           <div className="loading-container">
             <StackLoader size="large" />
@@ -471,43 +552,47 @@ const WidgetsPage: React.FC = () => {
                 {/* Expanded content */}
                 {expandedCard?.collectionName === collectionName && filteredData && (
                   <div className="expanded-content">
-                    {/* Video Source Selection */}
-                    <div className="video-source-selection">
-                      <h4>Video Sources</h4>
-                      <div className="source-buttons">
-                        {availableVideoSources.map(source => (
-                          <button
-                            key={source}
-                            className={`source-button ${expandedCard.videoSource === source ? 'selected' : ''}`}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleVideoSourceChange(source);
-                              setExpandedCard(prev => prev ? { ...prev, videoSource: source } : null);
-                            }}
-                          >
-                            Source {source}
-                          </button>
-                        ))}
+                  <div className="content-wrapper">
+                    <div className="video-source-section">
+                    <h4>Video Sources</h4>
+                    <div className="source-buttons">
+                      {availableVideoSources.map(source => (
+                        <button
+                        key={source}
+                        className={`source-button ${expandedCard.videoSource === source ? 'selected' : ''}`}
+                        onClick={(e) => handleVideoSourceChange(source, e)}
+                        >
+                        Source {source}
+                        </button>
+
+                      ))}
+                    </div>
+                    </div>
+
+                    <div className="rules-section">
+                      <h4>Rule Counts</h4>
+                      <div className="rules-grid">
+                      {filteredData?.data.map((ruleData, index) => (
+                        <div key={index} className="rule-item" onClick={(e) => e.stopPropagation()}>
+                        <div className="rule-header">
+                          <span className="rule-name">{ruleData.Rule}</span>
+                          <span className="rule-count">{ruleData.Count}</span>
+                        </div>
+                        <div className="rule-details">
+                          <span className="video-source">Source: {expandedCard.videoSource}</span>
+                          <span className="last-updated">
+                          Last Updated: {new Date(ruleData.LastUpdated || '').toLocaleTimeString()}
+                          </span>
+                        </div>
+                        </div>
+                      ))}
                       </div>
                     </div>
 
-                    {/* Field Counts - Add null check for fieldCounts */}
-                    <div className="field-counts">
-                      <h4>Available Fields</h4>
-                      <div className="fields-grid">
-                        {filteredData.fieldCounts && Object.entries(filteredData.fieldCounts || {}).map(([field, count]) => (
-                          <div
-                            key={field}
-                            className="field-item"
-                          >
-                            <div className="field-name">{field}</div>
-                            <div className="field-count">{count}</div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
+                  </div>
                   </div>
                 )}
+
               </div>
             ))}
           </div>

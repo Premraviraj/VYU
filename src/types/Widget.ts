@@ -1,7 +1,7 @@
 import { ColorState } from '../context/GraphContext';
 
 // Define chart types supported by Recharts
-export type GraphType = 'bar' | 'line' | 'pie' | 'area' | 'composed' | 'scatter' | 'bubble' | 'stackedArea' | 'dumbbell';
+export type GraphType = 'line' | 'bar' | 'pie' | 'area' | 'scatter';
 
 // Define the data structure for chart data
 export interface ChartData {

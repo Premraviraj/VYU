@@ -45,16 +45,15 @@ const FilterConfigModal: React.FC<FilterConfigModalProps> = ({
         const graphId = `graph-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
         const widgetData: Graph = {
           id: graphId,
-          type: config.countType === 'total' ? 'kpi' : 'graph',
           title: `${collectionName} - ${config.countType} Stats`,
-          data: {
+          type: config.countType === 'total' ? 'kpi' : 'graph',
+          data: [{
             type: config.countType,
             selectedData: []
-          },
-          backgroundColor: '#ffffff'
+          }]
         };
 
-        addGraph(graphId, widgetData);
+        addGraph(widgetData);
       }
 
       onClose();

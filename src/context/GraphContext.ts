@@ -51,10 +51,10 @@ export const GraphProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     updateGraph
   };
 
-  return (
-    <GraphContext.Provider value={contextValue}>
-      {children}
-    </GraphContext.Provider>
+  return React.createElement(
+    GraphContext.Provider,
+    { value: contextValue },
+    children
   );
 };
 

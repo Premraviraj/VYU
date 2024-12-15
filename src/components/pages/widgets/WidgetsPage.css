@@ -1,4 +1,193 @@
-.widgets-page {
+/* Ensure source info and rule count visibility */
+.widget-card .source-info,
+.widget-card .rule-count {
+  display: flex !important;
+  align-items: center !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  margin: 0.5rem 0 !important;
+  padding: 0.25rem 0.75rem !important;
+  background: #f8fafc !important;
+  border-radius: 8px !important;
+  color: #1e293b !important;
+}
+
+.widget-card .source-info span,
+.widget-card .rule-count span {
+  display: inline-block !important;
+  font-size: 0.875rem !important;
+  font-weight: 500 !important;
+}/* Ensure source info and rule count visibility */
+.widget-card .source-info,
+.widget-card .rule-count {
+  display: flex !important;
+  align-items: center !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  margin: 0.5rem 0 !important;
+  padding: 0.25rem 0.75rem !important;
+  background: #f8fafc !important;
+  border-radius: 8px !important;
+  color: #1e293b !important;
+}
+
+.widget-card .source-info span,
+.widget-card .rule-count span {
+  display: inline-block !important;
+  font-size: 0.875rem !important;
+  font-weight: 500 !important;
+}/* Ensure source info and rule count visibility */
+.widget-card .source-info,
+.widget-card .rule-count {
+  display: flex !important;
+  align-items: center !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  margin: 0.5rem 0 !important;
+  padding: 0.25rem 0.75rem !important;
+  background: #f8fafc !important;
+  border-radius: 8px !important;
+  color: #1e293b !important;
+}
+
+.widget-card .source-info span,
+.widget-card .rule-count span {
+  display: inline-block !important;
+  font-size: 0.875rem !important;
+  font-weight: 500 !important;
+}/* Video Source Section Styles */
+.video-source-section {
+  margin: 1rem 0;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 12px;
+}
+
+.source-buttons {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 0.5rem;
+}
+
+/* Rules Section Styles */
+.rules-section {
+  margin-top: 1rem;
+}
+
+.rules-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+}
+
+.rule-item {
+  background: white;
+  padding: 1rem;
+  border-radius: 12px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.rule-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.rule-name {
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.rule-count {
+  display: inline-flex !important;
+  align-items: center !important;
+  padding: 0.25rem 0.75rem !important;
+  background: #f1f5f9 !important;
+  border-radius: 9999px !important;
+  font-size: 0.875rem !important;
+  font-weight: 500 !important;
+  color: #64748b !important;
+}
+
+.video-source {
+  display: block !important;
+  color: #4f46e5 !important;
+  font-weight: 500 !important;
+  margin-top: 0.5rem !important;
+}
+
+.last-updated {
+  color: #94a3b8;
+  font-size: 0.75rem;
+}/* Video Source Section Styles */
+.video-source-section {
+  margin: 1rem 0;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 12px;
+}
+
+.source-buttons {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 0.5rem;
+}
+
+/* Rules Section Styles */
+.rules-section {
+  margin-top: 1rem;
+}
+
+.rules-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+}
+
+.rule-item {
+  background: white;
+  padding: 1rem;
+  border-radius: 12px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.rule-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.rule-name {
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.rule-count {
+  display: inline-flex !important;
+  align-items: center !important;
+  padding: 0.25rem 0.75rem !important;
+  background: #f1f5f9 !important;
+  border-radius: 9999px !important;
+  font-size: 0.875rem !important;
+  font-weight: 500 !important;
+  color: #64748b !important;
+}
+
+.video-source {
+  display: block !important;
+  color: #4f46e5 !important;
+  font-weight: 500 !important;
+  margin-top: 0.5rem !important;
+}
+
+.last-updated {
+  color: #94a3b8;
+  font-size: 0.75rem;
+}.widgets-page {
   background: linear-gradient(
     135deg, 
     #f8fafc 0%, 
@@ -7,7 +196,111 @@
   );
   min-height: 100vh;
   padding: 2rem 2rem 2rem 4rem;
-  position: relative;
+  position: relative;.widgets-page {
+    background: linear-gradient(
+      135deg, 
+      #f8fafc 0%, 
+      #f1f5f9 50%,
+      #f8fafc 100%
+    );
+    min-height: 100vh;
+    padding: 2rem 2rem 2rem 4rem;
+    position: relative;
+    overflow: visible;
+    width: calc(100% - 4rem);
+    margin: 0;
+  }
+  
+  /* Collection Card Styles */
+  .collection-card {
+    background: white;
+    border-radius: 16px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s ease;
+  }
+  
+  /* Video Source Section Styles */
+  .video-source-section {
+    margin: 1rem 0;
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.8);
+    border-radius: 12px;
+  }
+  
+  .source-buttons {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-top: 0.5rem;
+  }
+  
+  /* Rules Section Styles */
+  .rules-section {
+    margin-top: 1rem;
+  }
+  
+  .rules-grid {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  }
+  
+  .rule-item {
+    background: white;
+    padding: 1rem;
+    border-radius: 12px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    position: relative;
+    z-index: 1;
+  }
+  
+  .rule-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+  }
+  
+  .rule-name {
+    font-weight: 600;
+    color: #1e293b;
+    font-size: 1rem;
+  }
+  
+  .rule-count {
+    display: inline-flex !important;
+    align-items: center !important;
+    padding: 0.25rem 0.75rem !important;
+    background: #f1f5f9 !important;
+    border-radius: 9999px !important;
+    font-size: 0.875rem !important;
+    font-weight: 600 !important;
+    color: #4f46e5 !important;
+    z-index: 2 !important;
+    position: relative !important;
+  }
+  
+  .rule-details {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .video-source {
+    display: block !important;
+    color: #4f46e5 !important;
+    font-weight: 500 !important;
+    font-size: 0.875rem !important;
+    margin-top: 0.5rem !important;
+    z-index: 2 !important;
+    position: relative !important;
+  }
+  
+  .last-updated {
+    color: #94a3b8;
+    font-size: 0.75rem;
+  }
   overflow: visible;
   width: calc(100% - 4rem);
   margin: 0;

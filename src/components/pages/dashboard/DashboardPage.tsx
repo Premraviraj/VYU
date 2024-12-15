@@ -30,6 +30,13 @@ import { API_URL } from '../../../utils/config';
 import { ReceivedKpiData } from '../../../types/kpiTypes';
 import axios from 'axios';
 
+interface PreparedKPICard {
+  id: string;
+  title: string;
+  design: string;
+  fields: PreparedField[];
+}
+
 const ResponsiveGridLayout = WidthProvider(Responsive);
 
 const MIN_WIDTH = 372;
@@ -92,35 +99,36 @@ const iconMap: { [key: string]: JSX.Element } = {
   'Success': <CheckCircle />
 };
 
-// Add these interfaces at the top level, after the KPICard interface
+// Update the PreparedField interface
 interface PreparedField {
-  id: string;
-  name: string;
-  value: number;
-  styling: {
+  field_id: string;
+  field_name: string;
+  fieldvalue: number;
+  collection_name: string;
+  video_source: string;
+  rule_name: string;
+  styling?: {
     color: string;
     size: string;
     icon?: string;
   };
-  source: {
-    collection: string;
-    videoSource: string;
-    rule: string;
-  };
-}
-
-interface PreparedKPICard {
-  id: string;
-  title: string;
-  design: string;
-  fields: PreparedField[];
 }
 
 // Now the style utility functions can use PreparedField
 const getFieldStyles = (styling: PreparedField['styling']) => {
+  // Default styling if not provided
+  const defaultStyling = {
+    color: '#4f46e5',
+    size: 'medium',
+    icon: 'Dashboard'
+  };
+
+  // Use provided styling or default
+  const style = styling || defaultStyling;
+
   // Base styles
   const baseStyles: React.CSSProperties = {
-    color: styling.color,
+    color: style.color,
     transition: 'all 0.3s ease',
   };
 
@@ -169,35 +177,43 @@ const getFieldStyles = (styling: PreparedField['styling']) => {
     }
   };
 
+  // Use the size from styling or default to 'medium'
+  const size = style.size || 'medium';
+
   return {
     container: {
       ...baseStyles,
-      ...sizeStyles[styling.size],
+      ...sizeStyles[size],
     },
     value: {
-      ...valueStyles[styling.size],
-      color: styling.color,
+      ...valueStyles[size],
+      color: style.color,
       fontWeight: 600,
       lineHeight: 1.2,
     },
     icon: {
-      ...iconStyles[styling.size],
-      color: styling.color,
+      ...iconStyles[size],
+      color: style.color,
     },
     label: {
-      fontSize: `${sizeStyles[styling.size].fontSize}`,
-      color: `${styling.color}99`, // Add transparency to the color
+      fontSize: `${sizeStyles[size].fontSize}`,
+      color: `${style.color}99`, // Add transparency to the color
       fontWeight: 500,
     }
   };
 };
 
 // Add hover effect styles
-const getHoverStyles = (styling: PreparedField['styling']): React.CSSProperties => ({
-  transform: 'translateY(-4px)',
-  boxShadow: `0 8px 16px ${styling.color}15`,
-  background: `${styling.color}05`,
-});
+const getHoverStyles = (styling: PreparedField['styling']): React.CSSProperties => {
+  const defaultColor = '#4f46e5';
+  const color = styling?.color || defaultColor;
+  
+  return {
+    transform: 'translateY(-4px)',
+    boxShadow: `0 8px 16px ${color}15`,
+    background: `${color}05`,
+  };
+};
 
 const DashboardPage: React.FC = () => {
   const [isBlankWindowOpen, setIsBlankWindowOpen] = useState(false);
@@ -460,47 +476,45 @@ const DashboardPage: React.FC = () => {
     }
   };
 
-  // Add this new component
+  // Add handleCardDoubleClick function at the component level
+  const handleCardDoubleClick = (card: PreparedKPICard) => {
+    // TODO: Implement adding card to dashboard
+    console.log('Double clicked card:', card);
+    toast.info('Adding card to dashboard...');
+    setIsBlankWindowOpen(false);
+  };
+
+  // Update BlankWindow component to use the parent's handleCardDoubleClick
   const BlankWindow = () => {
     const [kpiCards, setKpiCards] = useState<PreparedKPICard[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [realTimeValues, setRealTimeValues] = useState<{[key: string]: number}>({});
+    const [cachedKpiCards, setCachedKpiCards] = useState<PreparedKPICard[]>([]);
+    const CACHE_DURATION = 30000; // 30 seconds cache
+    const [lastFetchTime, setLastFetchTime] = useState(0);
 
-    const transformKpiData = (receivedData: ReceivedKpiData): { kpiCards: KPICardValue[] } => {
-      if (!receivedData.fieldCounts) {
-        return { kpiCards: [] };
-      }
+    // Add useEffect to fetch data on mount
+    useEffect(() => {
+      console.log('BlankWindow mounted, fetching KPI cards...');
+      fetchKPICardsWithFetch();
+    }, []); // Empty dependency array means this runs once on mount
 
-      // If fieldCounts is an array, use it directly
-      if (Array.isArray(receivedData.fieldCounts)) {
-        return {
-          kpiCards: receivedData.fieldCounts.map(card => ({
-            ...card,
-            fields: card.fields || [],
-            kpi_name: card.kpi_name,
-            design_type: card.design_type,
-            collection_name: card.collection_name,
-            video_source: card.video_source
-          }))
-        };
-      }
-
-      // If fieldCounts is an object, transform it to array
-      const kpiCards = Object.entries(receivedData.fieldCounts).map(([key, value]) => ({
-        fields: value.fields || [],
-        kpi_name: value.kpi_name,
-        design_type: value.design_type,
-        collection_name: value.collection_name,
-        video_source: value.video_source
-      }));
-
-      return { kpiCards };
-    };
-
-    // Using Fetch API
+    // Update fetchKPICardsWithFetch function with caching
     const fetchKPICardsWithFetch = async () => {
       try {
+        const currentTime = Date.now();
+        
+        // Return cached data if it's still valid
+        if (cachedKpiCards.length > 0 && (currentTime - lastFetchTime) < CACHE_DURATION) {
+          console.log('Using cached KPI cards');
+          setKpiCards(cachedKpiCards);
+          setIsLoading(false);
+          return;
+        }
+
+        console.log('Fetching fresh KPI cards...');
         setIsLoading(true);
+        
         const response = await fetch(`${API_URL}/api/v1/kpiCards`, {
           method: 'GET',
           headers: {
@@ -512,122 +526,66 @@ const DashboardPage: React.FC = () => {
 
         if (response.ok) {
           const data = await response.json();
-          console.log('Raw Response Data:', JSON.stringify(data, null, 2));
-
-          if (!data.fieldCounts || !Array.isArray(data.fieldCounts)) {
-            console.error('Invalid data structure:', data);
-            return;
-          }
-
-          const preparedCards = data.fieldCounts.map(card => {
-            if (!card.fields || !Array.isArray(card.fields)) {
-              return {
-                id: card._id.toString(),
-                title: card.kpi_name,
-                design: card.design_type || 'modern',
-                fields: []
-              };
-            }
-
-            // Transform fields to match the expected structure
-            const transformedFields = card.fields.map(field => ({
-              field_id: field.field_id,
-              field_name: field.field_name,
-              field_value: field.field_value,
+          console.log('Received KPI data:', data); // Add this log
+          const cardsData = Array.isArray(data) ? data : data.kpiCards || [];
+          
+          const preparedCards = cardsData.map((card: any) => ({
+            id: card.kpi_id || `kpi-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            title: card.kpi_name || 'Untitled KPI',
+            design: card.design_type || 'modern',
+            fields: Array.isArray(card.fields) ? card.fields.map((field: any) => ({
+              field_id: field.field_id || `field-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+              field_name: field.field_name || field.rule_name || 'Unnamed Field',
+              fieldvalue: field.field_value || field.fieldvalue || 0,
+              collection_name: field.collection_name || card.collection_name || '',
+              video_source: field.video_source || card.video_source || '',
+              rule_name: field.rule_name || field.field_name || '',
               styling: {
                 color: field.styling?.color || '#4f46e5',
                 size: field.styling?.size || 'medium',
-                icon: field.styling?.icon
-              },
-              source: {
-                collection: field.collection_name,
-                videoSource: field.video_source,
-                rule: field.rule_name
+                icon: field.styling?.icon || 'Dashboard'
               }
-            }));
+            })) : []
+          }));
 
-            return {
-              id: card._id.toString(),
-              title: card.kpi_name,
-              design: card.design_type || 'modern',
-              fields: transformedFields
-            };
-          });
+          console.log('Prepared cards:', preparedCards); // Add this log
 
-          console.log('Prepared KPI Cards:', preparedCards);
+          // Update cache and state
+          setCachedKpiCards(preparedCards);
+          setLastFetchTime(currentTime);
           setKpiCards(preparedCards);
+
+          // Fetch field values in the background
+          if (preparedCards.length > 0) {
+            fetchFieldValues(preparedCards).catch(console.error);
+          }
         } else {
+          console.error('Failed to fetch KPI cards:', response.status);
           const errorText = await response.text();
-          console.error('Fetch Error:', {
-            status: response.status,
-            statusText: response.statusText,
-            error: errorText
-          });
+          console.error('Error response:', errorText);
         }
       } catch (error) {
-        console.error('Fetch Error:', error);
+        console.error('Error fetching KPI cards:', error);
       } finally {
         setIsLoading(false);
       }
     };
 
-    // Using Axios
-    const fetchKPICardsWithAxios = async () => {
-      try {
-        setIsLoading(true);
-        const response = await axios.get(`${API_URL}/api/v1/Collection/kpiCards`, {
-          headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json'
-          },
-          withCredentials: true
-        });
+    // Update fetchFieldValues to be non-blocking
+    const fetchFieldValues = async (cards: PreparedKPICard[]) => {
+      const fetchPromises = cards.flatMap(card =>
+        card.fields.map(field => fetchFieldData(field))
+      );
 
-        // Log detailed response data
-        console.log('KPI Cards Data (Axios):', {
-          status: response.status,
-          statusText: response.statusText,
-          headers: response.headers,
-          data: JSON.stringify(response.data, null, 2)
-        });
-
-      } catch (error) {
-        if (axios.isAxiosError(error)) {
-          console.error('Axios Error:', {
-            status: error.response?.status,
-            statusText: error.response?.statusText,
-            error: error.response?.data
-          });
-        } else {
-          console.error('Unexpected Error:', error);
-        }
-      } finally {
-        setIsLoading(false);
-      }
+      // Execute all fetches in parallel
+      await Promise.allSettled(fetchPromises);
     };
 
-    // Use one of these in your useEffect
-    useEffect(() => {
-      // Choose either Fetch or Axios implementation
-      fetchKPICardsWithFetch();
-      // OR
-      // fetchKPICardsWithAxios();
-
-      // Set up interval for periodic updates
-      const interval = setInterval(() => {
-        fetchKPICardsWithFetch();
-        // OR
-        // fetchKPICardsWithAxios();
-      }, 5000);
-
-      return () => clearInterval(interval);
-    }, []);
-
-    // Update the fetchFieldData function
+    // Optimize fetchFieldData
     const fetchFieldData = async (field: PreparedField) => {
       try {
         const response = await fetch(
-          `${API_URL}/api/v1/Collection/filtered?collection=${encodeURIComponent(field.source.collection)}&VideoSource=${encodeURIComponent(field.source.videoSource)}&Rule=${encodeURIComponent(field.source.rule)}`,
+          `${API_URL}/api/v1/Collection/filtered/count?collection=${encodeURIComponent(field.collection_name)}&VideoSource=${encodeURIComponent(field.video_source)}&Rule=${encodeURIComponent(field.rule_name)}`,
           {
             method: 'GET',
             headers: {
@@ -640,102 +598,87 @@ const DashboardPage: React.FC = () => {
 
         if (response.ok) {
           const data = await response.json();
-          if (data && data.fieldCounts && data.fieldCounts[field.source.rule] !== undefined) {
+          if (data?.fieldCounts?.[field.rule_name] !== undefined) {
             setRealTimeValues(prev => ({
               ...prev,
-              [field.id]: data.fieldCounts[field.source.rule]
+              [field.field_id]: data.fieldCounts[field.rule_name]
             }));
           }
         }
       } catch (error) {
-        console.error(`Error fetching data for field ${field.name}:`, error);
+        console.error(`Error fetching data for field ${field.field_name}:`, error);
       }
     };
 
-    // Update the useEffect that uses fetchFieldData
-    useEffect(() => {
-      if (kpiCards.length === 0) return;
+    // Update the field rendering logic
+    const renderField = (field: PreparedField) => {
+      if (!field || !field.field_id) {
+        console.error('Invalid field data:', field);
+        return null;
+    }
 
-      // Initial fetch for all fields
-      kpiCards.forEach(card => {
-        card.fields.forEach(field => {
-          // Check source properties
-          if (field.source && field.source.collection && field.source.videoSource) {
-            fetchFieldData(field);
-          }
-        });
+      const styles = getFieldStyles(field.styling || {
+        color: '#4f46e5',
+        size: 'medium'
       });
-
-      // Set up interval for updates
-      const interval = setInterval(() => {
-        kpiCards.forEach(card => {
-          card.fields.forEach(field => {
-            // Check source properties
-            if (field.source && field.source.collection && field.source.videoSource) {
-              fetchFieldData(field);
-            }
-          });
-        });
-      }, 5000);
-
-      return () => clearInterval(interval);
-    }, [kpiCards]);
-
-    // Update the field rendering in BlankWindow component
-    const renderField = (field: any) => {
-      // Extract values from field object
-      const {
-        field_id,
-        field_name,
-        field_value,
-        styling = {
-          color: '#4f46e5',
-          size: 'medium'
-        }
-      } = field;
-
-      // Get styles for the field
-      const styles = getFieldStyles(styling);
       
       return (
         <div 
-          key={field_id} 
-          className={`kpi-field ${styling.size || 'medium'}`}
+          key={field.field_id} 
+          className={`kpi-field ${field.styling?.size || 'medium'}`}
           style={styles.container}
         >
-          {styling.icon && iconMap[styling.icon] && (
+          {field.styling?.icon && iconMap[field.styling.icon] && (
             <div className="field-icon" style={styles.icon}>
-              {iconMap[styling.icon]}
+              {iconMap[field.styling.icon]}
             </div>
           )}
           <div className="field-value" style={styles.value}>
-            {realTimeValues[field_id] !== undefined 
-              ? String(realTimeValues[field_id])
-              : String(field_value)}
+            {typeof realTimeValues[field.field_id] !== 'undefined'
+              ? realTimeValues[field.field_id].toLocaleString()
+              : (field.fieldvalue || 0).toLocaleString()}
           </div>
           <div className="field-label" style={styles.label}>
-            {field_name}
+            {field.field_name || 'Unnamed Field'}
           </div>
         </div>
       );
     };
 
-    // Update the KPI card rendering
-    const renderKPICard = (card: PreparedKPICard) => (
-      <div key={card.id} className={`kpi-preview-${card.design}`}>
-        <div className="kpi-main-content">
-          <div className="kpi-header">
-            <h3 className="kpi-title">{card.title}</h3>
+    // Update the renderKPICard function
+    const renderKPICard = (card: PreparedKPICard) => {
+      try {
+        console.log('Rendering KPI card:', card);
+        return (
+          <div 
+            className="kpi-preview-modern"
+            onDoubleClick={() => handleCardDoubleClick(card)}
+            style={{ cursor: 'pointer' }}
+            title="Double click to add to dashboard"
+          >
+            <div className="kpi-main-content">
+              <div className="kpi-header">
+                <h3 className="kpi-title">{card.title || 'Card Title'}</h3>
+              </div>
+              <div className="kpi-fields-grid">
+                {Array.isArray(card.fields) && card.fields.map((field: PreparedField) => (
+                  <div key={field.field_id}>
+                    {renderField(field)}
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
-          <div className="kpi-fields-grid">
-            {Array.isArray(card.fields) ? 
-              card.fields.map(field => renderField(field))
-              : null
-            }
+        );
+      } catch (error) {
+        console.error('Error rendering card:', card, error);
+        return (
+          <div key={card.id} className="error-card">
+            Error rendering card: {card.title}
           </div>
-        </div>
-      </div>
-    );
+        );
+      }
+    };
 
     return (
       <div className="blank-window-overlay">
@@ -752,25 +695,18 @@ const DashboardPage: React.FC = () => {
           <div className="blank-window-content">
             {isLoading ? (
               <div className="loading-state">Loading KPI Cards...</div>
-            ) : kpiCards.length === 0 ? (
+            ) : kpiCards && kpiCards.length > 0 ? (
+              <div className="kpi-cards-grid">
+                {kpiCards.map((card) => (
+                  <div key={card.id}>
+                    {renderKPICard(card)}
+                  </div>
+                ))}
+              </div>
+            ) : (
               <div className="empty-state">
                 <h3>No KPI Cards Found</h3>
                 <p>Create your first KPI card to see it here.</p>
-              </div>
-            ) : (
-              <div className="kpi-cards-grid">
-                {kpiCards.map(card => {
-                  try {
-                    return renderKPICard(card);
-                  } catch (error) {
-                    console.error('Error rendering card:', card, error);
-                    return (
-                      <div key={card.id} className="error-card">
-                        Error rendering card: {card.title}
-                      </div>
-                    );
-                  }
-                })}
               </div>
             )}
           </div>
