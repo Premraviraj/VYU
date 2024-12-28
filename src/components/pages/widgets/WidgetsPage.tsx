@@ -31,6 +31,7 @@ interface FilteredData {
   fieldCounts: {
     [key: string]: number;
   };
+  rawResponse?: any;
 }
 
 interface SelectedDataItem {
@@ -262,7 +263,8 @@ const WidgetsPage: React.FC = (): React.ReactElement => {
             VideoSource: initialSource
           },
           data: data.data || [],
-          fieldCounts: data.fieldCounts || {}
+          fieldCounts: data.fieldCounts || {},
+          rawResponse: data
           };
           setFilteredData(processedData);
           setExpandedCard({ collectionName, videoSource: initialSource });
@@ -343,43 +345,29 @@ const WidgetsPage: React.FC = (): React.ReactElement => {
       }
 
       const data = await response.json();
-      console.log('Updated collection data:', data);
-      console.log('Updated field counts:', data.fieldCounts);
+      console.log('Raw API response:', data);
       
-      // Update the filtered data with the new source's data
       if (data && typeof data === 'object') {
-        // Transform the data to include both rule counts and rule details
+        // Use the raw response data directly
         const processedData: FilteredData = {
           collection: expandedCard.collectionName,
           filter: {
             VideoSource: source
           },
-          data: Array.isArray(data.data) ? data.data.map((item: any) => ({
-            Rule: item.Rule || '',
-            Count: item.Count || 0,
+          data: data.ruleCounts ? Object.entries(data.ruleCounts).map(([rule, count]) => ({
+            Rule: rule,
+            Count: count as number,
             VideoSource: source,
-            LastUpdated: item.LastUpdated || new Date().toISOString()
+            LastUpdated: new Date().toISOString()
           })) : [],
-          fieldCounts: data.fieldCounts || {}
+          fieldCounts: data.fieldCounts || {},
+          rawResponse: data
         };
 
+        console.log('Processed data:', processedData);
         setFilteredData(processedData);
         setExpandedCard(prev => prev ? { ...prev, videoSource: source } : null);
         setSelectedVideoSource(source);
-
-        // Show the updated data in a toast notification
-        if (data.fieldCounts) {
-          const totalCount = Object.values(data.fieldCounts).reduce<number>(
-            (sum, count) => sum + (typeof count === 'number' ? count : 0), 
-            0
-          );
-          toast.info(`Source ${source} Total Count: ${totalCount}`, {
-            position: "top-right",
-            autoClose: 3000
-          });
-        }
-      } else {
-        throw new Error('Invalid data format received from server');
       }
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -552,44 +540,56 @@ const WidgetsPage: React.FC = (): React.ReactElement => {
                 {/* Expanded content */}
                 {expandedCard?.collectionName === collectionName && filteredData && (
                   <div className="expanded-content">
-                  <div className="content-wrapper">
-                    <div className="video-source-section">
-                    <h4>Video Sources</h4>
-                    <div className="source-buttons">
-                      {availableVideoSources.map(source => (
-                        <button
-                        key={source}
-                        className={`source-button ${expandedCard.videoSource === source ? 'selected' : ''}`}
-                        onClick={(e) => handleVideoSourceChange(source, e)}
-                        >
-                        Source {source}
-                        </button>
+                    <div className="content-wrapper">
+                      <div className="video-source-section">
+                        <h4>Video Sources</h4>
+                        <div className="source-buttons">
+                          {availableVideoSources.map(source => (
+                            <button
+                              key={source}
+                              className={`source-button ${expandedCard.videoSource === source ? 'selected' : ''}`}
+                              onClick={(e) => handleVideoSourceChange(source, e)}
+                            >
+                              Source {source}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
 
-                      ))}
-                    </div>
-                    </div>
-
-                    <div className="rules-section">
-                      <h4>Rule Counts</h4>
-                      <div className="rules-grid">
-                      {filteredData?.data.map((ruleData, index) => (
-                        <div key={index} className="rule-item" onClick={(e) => e.stopPropagation()}>
-                        <div className="rule-header">
-                          <span className="rule-name">{ruleData.Rule}</span>
-                          <span className="rule-count">{ruleData.Count}</span>
-                        </div>
-                        <div className="rule-details">
-                          <span className="video-source">Source: {expandedCard.videoSource}</span>
-                          <span className="last-updated">
-                          Last Updated: {new Date(ruleData.LastUpdated || '').toLocaleTimeString()}
-                          </span>
-                        </div>
-                        </div>
-                      ))}
+                      <div className="rules-section">
+                        <h4>Rule Counts</h4>
+                        {filteredData.rawResponse?.ruleCounts ? (
+                          <div className="rules-grid">
+                            {Object.entries(filteredData.rawResponse.ruleCounts).map(([rule, count], index) => (
+                              <div key={`${rule}-${index}`} className="rule-card" onClick={(e) => e.stopPropagation()}>
+                                <div className="rule-card-header">
+                                  <h5>{rule}</h5>
+                                  <span className="rule-count-badge">
+                                    {typeof count === 'number' ? count : 0}
+                                  </span>
+                                </div>
+                                <div className="rule-card-body">
+                                  <div className="rule-info">
+                                    <span className="source-label">Source:</span>
+                                    <span className="source-value">{expandedCard.videoSource}</span>
+                                  </div>
+                                  <div className="rule-info">
+                                    <span className="update-label">Last Updated:</span>
+                                    <span className="update-value">
+                                      {new Date().toLocaleTimeString()}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="no-rules-message">
+                            No rules found for this source
+                          </div>
+                        )}
                       </div>
                     </div>
-
-                  </div>
                   </div>
                 )}
 

@@ -22,15 +22,14 @@ export interface ChartProps {
 // Define Widget interface
 export interface Widget {
   id: string;
-  type: 'graph' | 'kpi';
+  type: 'graph';
   title: string;
   content: string;
   backgroundColor?: string;
-  chartProps?: ChartProps;
-  data?: {
-    collection?: string;
-    videoSource?: string;
-    selectedFields?: string[];
+  chartProps?: {
+    type: GraphType;
+    data: any[];
+    colors: ColorState;
   };
 }
 

@@ -91,13 +91,16 @@
 .widgets-display {
   position: relative;
   width: 100%;
-  padding: 20px;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 16px;
+  background: transparent;
 }
 
 .widgets-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 24px;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 16px;
   padding: 24px;
   width: 100%;
 }
@@ -106,11 +109,9 @@
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: rgba(255, 255, 255, 0.6);
+  background: white;
   border-radius: 16px;
-  box-shadow: 
-    0 4px 20px rgba(0, 0, 0, 0.05), 
-    0 8px 16px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.7);
   backdrop-filter: blur(10px);
@@ -207,46 +208,116 @@
 /* KPI Cards Grid */
 .kpi-cards-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-  gap: 2rem;
-  padding: 1rem;
-  animation: fadeInUp 0.5s ease-out;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 48px;
+  padding: 48px;
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
 }
 
-.kpi-card-wrapper {
+.kpi-card {
   background: white;
   border-radius: 16px;
-  overflow: hidden;
-  box-shadow: 
-    0 4px 6px rgba(0, 0, 0, 0.02),
-    0 2px 4px rgba(0, 0, 0, 0.03);
+  padding: 16px;
+  color: #1f2937;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  height: 180px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  position: relative;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
-  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(0, 0, 0, 0.1);
 }
 
-.kpi-card-wrapper::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 4px;
-  background: linear-gradient(90deg, #4f46e5, #6366f1);
-  transform: scaleX(0);
-  transform-origin: left;
-  transition: transform 0.3s ease;
-}
-
-.kpi-card-wrapper:hover {
+.kpi-card:hover {
   transform: translateY(-4px);
-  box-shadow: 
-    0 12px 24px rgba(0, 0, 0, 0.05),
-    0 4px 8px rgba(0, 0, 0, 0.05);
+  background: #4169E1;
+  border-color: transparent;
+  box-shadow: 0 12px 24px rgba(65, 105, 225, 0.3);
 }
 
-.kpi-card-wrapper:hover::before {
-  transform: scaleX(1);
+.kpi-card:hover .kpi-card-title,
+.kpi-card:hover .kpi-value,
+.kpi-card:hover .kpi-name,
+.kpi-card:hover .kpi-source {
+  color: white !important;
+}
+
+.kpi-card-title {
+  margin: 0 0 12px 0;
+  font-size: 1.2rem;
+  font-weight: 500;
+  color: #1f2937;
+  position: relative;
+  z-index: 1;
+  transition: color 0.3s ease;
+  text-align: left;
+  padding-left: 16px;
+}
+
+.kpi-card-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  transform: translateX(-5%);
+}
+
+.kpi-value {
+  font-size: 2rem;
+  font-weight: 600;
+  margin-bottom: 4px;
+  line-height: 1;
+  color: #1f2937;
+  transition: color 0.3s ease;
+  text-align: center;
+}
+
+.kpi-name {
+  font-size: 0.9rem;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  text-align: center;
+}
+
+.kpi-source {
+  font-size: 0.8rem;
+  margin-top: 4px;
+  text-align: center;
+}
+
+/* Hover Animation */
+@keyframes pulseGlow {
+  0% {
+    box-shadow: 0 4px 6px rgba(65, 105, 225, 0.1);
+  }
+  50% {
+    box-shadow: 0 12px 24px rgba(65, 105, 225, 0.2);
+  }
+  100% {
+    box-shadow: 0 4px 6px rgba(65, 105, 225, 0.1);
+  }
+}
+
+.kpi-card:hover {
+  animation: pulseGlow 2s infinite;
+}
+
+.blank-window-content {
+  background: #f8fafc;
+  padding: 48px;
+  border-radius: 8px;
+  overflow-y: auto;
+  max-height: calc(100vh - 200px);
 }
 
 /* Loading State */
@@ -351,29 +422,25 @@
 /* Responsive Adjustments */
 @media (max-width: 1200px) {
   .kpi-cards-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(3, 1fr);
+    gap: 40px;
+    padding: 40px;
   }
 }
 
-@media (max-width: 768px) {
-  .dashboard-container h1 {
-    font-size: 2rem;
+@media (max-width: 992px) {
+  .kpi-cards-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 36px;
+    padding: 36px;
   }
+}
 
+@media (max-width: 576px) {
   .kpi-cards-grid {
     grid-template-columns: 1fr;
-  }
-
-  .blank-window {
-    width: 95%;
-    padding: 1rem;
-  }
-
-  .dashboard-add-button {
-    width: 50px;
-    height: 50px;
-    bottom: 1.5rem;
-    right: 1.5rem;
+    gap: 32px;
+    padding: 32px;
   }
 }
 
@@ -395,4 +462,898 @@
 
 .blank-window-content::-webkit-scrollbar-thumb:hover {
   background: rgba(99, 102, 241, 0.5);
+}
+
+.kpi-widget {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 180px;
+  max-width: 250px;
+}
+
+.widget-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  min-height: 40px;
+}
+
+.widget-header h3 {
+  font-size: 1rem;
+  margin: 0;
+}
+
+.remove-widget {
+  background: none;
+  border: none;
+  color: #6b7280;
+  cursor: pointer;
+  font-size: 1.5rem;
+  padding: 0.25rem;
+  transition: all 0.3s ease;
+}
+
+.remove-widget:hover {
+  color: #ef4444;
+  transform: rotate(90deg);
+}
+
+/* Remove resize handle styles */
+.react-resizable-handle {
+  display: none !important;
+}
+
+/* Optional: Add smooth transitions for dragging */
+.react-grid-item {
+  transition: transform 0.2s ease;
+}
+
+.react-grid-item.react-grid-placeholder {
+  background: rgba(63, 81, 181, 0.1) !important;
+  border-radius: 16px;
+  border: 2px dashed #3f51b5;
+}
+
+.layout {
+  background: transparent !important;
+  --min-column-width: 250px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* Responsive grid adjustments */
+@media (min-width: 640px) {
+  .kpi-cards-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .kpi-cards-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (min-width: 1280px) {
+  .kpi-cards-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* KPI Card styles when added to dashboard */
+.widget-item .kpi-card {
+  height: 100%;
+  width: 100%;
+  max-width: 280px;
+  min-height: 160px;
+  padding: 16px;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Adjust content sizing in dashboard */
+.widget-item .kpi-card-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 12px;
+}
+
+/* Adjust value size in dashboard */
+.widget-item .kpi-value {
+  font-size: 2rem;
+  margin-bottom: 4px;
+}
+
+/* Adjust name size in dashboard */
+.widget-item .kpi-name {
+  font-size: 0.9rem;
+  margin-bottom: 4px;
+}
+
+/* Adjust source size in dashboard */
+.widget-item .kpi-source {
+  font-size: 0.8rem;
+}
+
+/* Adjust title in dashboard */
+.widget-item .kpi-card-title {
+  font-size: 1rem;
+  margin-bottom: 8px;
+}
+
+/* Layout adjustments */
+.layout {
+  background: transparent !important;
+}
+
+.react-grid-item {
+  display: flex !important;
+  justify-content: center;
+  align-items: center;
+  max-width: 300px;
+}
+
+.react-grid-item > .widget-item {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+/* Dashboard specific title styles */
+.widget-item .kpi-card-title {
+  font-size: 1rem;
+  margin-bottom: 8px;
+  color: #1f2937;
+  transition: color 0.3s ease;
+}
+
+/* Dashboard specific hover styles */
+.widget-item .kpi-card:hover .kpi-card-title {
+  color: white !important;
+}
+
+/* Dashboard header with plus button */
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  position: relative;
+}
+
+.add-kpi-button {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 
+    0 4px 12px rgba(79, 70, 229, 0.2),
+    0 8px 24px rgba(79, 70, 229, 0.1);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  color: white;
+}
+
+.add-kpi-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 
+    0 8px 20px rgba(79, 70, 229, 0.3),
+    0 12px 28px rgba(79, 70, 229, 0.2);
+  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+}
+
+.add-kpi-button:active {
+  transform: translateY(0);
+}
+
+.add-kpi-button svg {
+  font-size: 24px;
+  transition: transform 0.3s ease;
+}
+
+.add-kpi-button:hover svg {
+  transform: rotate(90deg);
+}
+
+/* Grid layout adjustments */
+.layout {
+  position: relative !important;
+  background: transparent !important;
+  min-height: calc(100vh - 200px) !important;
+  width: 100% !important;
+}
+
+.react-grid-item {
+  transition: all 200ms ease;
+  transition-property: left, top, width, height;
+  z-index: 1;
+}
+
+.react-grid-item.react-grid-placeholder {
+  background: rgba(63, 81, 181, 0.1) !important;
+  border-radius: 16px;
+  border: 2px dashed #3f51b5;
+  opacity: 0.5;
+  z-index: 0;
+  transition-duration: 100ms;
+  user-select: none;
+}
+
+.react-grid-item:hover {
+  z-index: 2;
+}
+
+.react-grid-item.cssTransforms {
+  transition-property: transform, width, height;
+}
+
+.react-grid-item.resizing {
+  z-index: 3;
+}
+
+.react-grid-item.react-draggable-dragging {
+  transition: none;
+  z-index: 3;
+}
+
+/* Card Flip Animation */
+.kpi-card-container {
+  perspective: 1000px;
+  width: 100%;
+  height: 100%;
+}
+
+.kpi-card-flipper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.6s;
+  transform-style: preserve-3d;
+}
+
+.kpi-card-container.flipped .kpi-card-flipper {
+  transform: rotateY(180deg);
+}
+
+.kpi-card.front,
+.kpi-card.back {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  backface-visibility: hidden;
+  border-radius: 16px;
+}
+
+.kpi-card.front {
+  z-index: 2;
+  transform: rotateY(0deg);
+  cursor: move;
+  pointer-events: all !important;
+  transition: all 0.3s ease;
+}
+
+.kpi-card.front:hover,
+.widget-item-wrapper:hover .kpi-card.front {
+  background: #4169E1;
+}
+
+.kpi-card.front:hover .kpi-card-title,
+.kpi-card.front:hover .kpi-value,
+.kpi-card.front:hover .kpi-name,
+.kpi-card.front:hover .kpi-source,
+.widget-item-wrapper:hover .kpi-card-title,
+.widget-item-wrapper:hover .kpi-value,
+.widget-item-wrapper:hover .kpi-name,
+.widget-item-wrapper:hover .kpi-source {
+  color: white !important;
+}
+
+.kpi-card.front:hover,
+.widget-item-wrapper:hover .kpi-card.front {
+  box-shadow: 0 12px 24px rgba(65, 105, 225, 0.3);
+}
+
+.kpi-card-container.flipped .kpi-card.front {
+  pointer-events: none !important;
+}
+
+.kpi-card.back {
+  background: #4169E1;
+  transform: rotateY(180deg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: all !important;
+}
+
+/* Card Options Container */
+.card-options {
+  display: flex;
+  gap: 24px;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  position: relative;
+}
+
+/* Enhanced button styles */
+.card-option-btn {
+  width: 55px;
+  height: 55px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  color: white;
+  position: relative;
+  overflow: hidden;
+  background: transparent;
+  pointer-events: all !important;
+}
+
+/* Edit button styles */
+.card-option-btn.edit {
+  position: relative;
+  z-index: 10;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  background: rgba(255, 255, 255, 0.2);
+  border: 2px solid rgba(255, 255, 255, 0.8);
+}
+
+/* Edit mode styles */
+.card-options.edit-mode {
+  position: relative;
+  z-index: 100;
+}
+
+.card-options.edit-mode .edit-panel {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 300px;
+  background: #4169E1;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.4s ease;
+}
+
+.card-options.edit-mode .edit-panel.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Keep edit button visible */
+.card-option-btn.edit.edit-mode {
+  transform: scale(1);
+  background: #4169E1;
+  border-color: white;
+  z-index: 101;
+}
+
+/* Edit panel overlay */
+.edit-mode::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s ease;
+  z-index: 90;
+}
+
+.edit-mode.active::before {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Edit panel animation */
+.edit-panel {
+  transform: scale(0.8);
+  opacity: 0;
+  transition: all 0.3s ease;
+}
+
+.edit-mode .edit-panel {
+  transform: scale(1);
+  opacity: 1;
+}
+
+/* Keep buttons clickable */
+.card-option-btn,
+.edit-panel button {
+  position: relative;
+  z-index: 102;
+  pointer-events: auto !important;
+}
+
+/* Remove button styles */
+.card-option-btn.remove {
+  border: 3px solid rgba(239, 68, 68, 0.9);
+  background: rgba(239, 68, 68, 0.15);
+  box-shadow: 0 0 15px rgba(239, 68, 68, 0.2);
+}
+
+.card-option-btn.remove::before {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle, rgba(239,68,68,0.3) 0%, transparent 70%);
+  transform: scale(0);
+  transition: transform 0.4s ease;
+}
+
+.card-option-btn.remove:hover::before {
+  transform: scale(2);
+}
+
+.card-option-btn.remove:hover {
+  transform: translateY(-5px) rotate(-15deg);
+  box-shadow: 0 15px 25px rgba(239, 68, 68, 0.3);
+  background: rgba(239, 68, 68, 0.25);
+}
+
+/* Icon animations */
+@keyframes iconPulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+
+.card-option-btn svg {
+  font-size: 26px;
+  transition: all 0.3s ease;
+  position: relative;
+  z-index: 1;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+}
+
+.card-option-btn:hover svg {
+  animation: iconPulse 1s infinite;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
+}
+
+/* Delete animation */
+@keyframes deleteCard {
+  0% { 
+    transform: scale(1) rotate(0);
+    opacity: 1;
+  }
+  50% { 
+    transform: scale(0.8) rotate(-10deg);
+    opacity: 0.5;
+  }
+  100% { 
+    transform: scale(0) rotate(-20deg);
+    opacity: 0;
+  }
+}
+
+.widget-item.deleting {
+  animation: deleteCard 0.5s ease-in forwards;
+}
+
+.widget-item-wrapper {
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+  position: relative;
+  padding: 0;
+  margin: 0;
+}
+
+.widget-item-wrapper::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: -20px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.75rem;
+  color: #6b7280;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.widget-item-wrapper:hover::after {
+  opacity: 0.7;
+}
+
+.widget-item-wrapper * {
+  pointer-events: none;
+}
+
+.card-option-btn {
+  pointer-events: all !important;
+  cursor: pointer;
+}
+
+.kpi-card-container {
+  width: 100%;
+  height: 100%;
+  perspective: 1000px;
+}
+
+.kpi-card-flipper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.6s;
+  transform-style: preserve-3d;
+}
+
+/* Front and back card styles */
+.kpi-card.front,
+.kpi-card.back {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  backface-visibility: hidden;
+  border-radius: 16px;
+}
+
+/* Front card specific styles */
+.kpi-card.front {
+  background: white;
+  z-index: 2;
+  transform: rotateY(0deg);
+}
+
+/* Back card specific styles */
+.kpi-card.back {
+  background: #4169E1;
+  transform: rotateY(180deg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Content styles */
+.kpi-card-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  transform: translateX(-5%);
+}
+
+/* Grid item styles */
+.react-grid-item {
+  display: flex !important;
+  justify-content: center;
+  align-items: center;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+.react-grid-item > .widget-item {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+/* Remove any extra spacing */
+.widget-item {
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  margin: 0;
+}
+
+/* Add styles for when dragging is disabled */
+.kpi-card-container.flipped {
+  cursor: default;
+}
+
+.kpi-card-container.flipped ~ .react-grid-item {
+  pointer-events: none;
+}
+
+/* Update the tooltip to show different text when flipped */
+.widget-item-wrapper::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: -20px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.75rem;
+  color: #6b7280;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+/* Edit Panel Animation and Styles */
+.edit-panel {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  opacity: 0;
+  visibility: hidden;
+  width: 300px;
+  z-index: 20;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.edit-mode .edit-panel {
+  transform: translate(-50%, -50%) scale(1);
+  opacity: 1;
+  visibility: visible;
+  transition-delay: 0.2s;
+}
+
+/* Card options container */
+.card-options {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  gap: 24px;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Overlay for edit mode */
+.card-options::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s ease;
+  z-index: 5;
+  pointer-events: none;
+}
+
+.card-options.edit-mode::before {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Close button for edit mode */
+.close-edit {
+  position: absolute;
+  top: -40px;
+  right: -40px;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: white;
+  border: none;
+  color: #4169E1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0;
+  transform: scale(0);
+  transition: all 0.3s ease;
+}
+
+.edit-mode .close-edit {
+  opacity: 1;
+  transform: scale(1);
+  transition-delay: 0.3s;
+}
+
+/* Adjust option animations */
+.edit-option {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: all 0.3s ease;
+}
+
+.edit-mode .edit-option {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.edit-option:nth-child(1) { transition-delay: 0.3s; }
+.edit-option:nth-child(2) { transition-delay: 0.4s; }
+.edit-option:nth-child(3) { transition-delay: 0.5s; }
+
+.edit-dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.75);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  backdrop-filter: blur(8px);
+}
+
+.edit-dialog {
+  background: #ffffff;  /* Solid white background */
+  border-radius: 16px;
+  width: 90%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 0 50px rgba(0, 0, 0, 0.3);
+  z-index: 10000;
+  position: relative;
+  color: #1f2937;
+}
+
+.edit-dialog-header {
+  background: #ffffff;
+  padding: 20px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.edit-dialog-header h3 {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.edit-dialog-content {
+  background: #ffffff;
+  padding: 20px;
+}
+
+/* Edit Options */
+.edit-option {
+  background: #ffffff;
+  padding: 20px;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  margin-bottom: 20px;
+}
+
+.edit-option label {
+  color: #1f2937;
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 12px;
+  display: block;
+}
+
+/* Size Buttons */
+.size-buttons {
+  display: flex;
+  gap: 12px;
+}
+
+.size-btn {
+  background: #ffffff;
+  border: 2px solid #e5e7eb;
+  color: #1f2937;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 500;
+  min-width: 80px;
+  text-align: center;
+}
+
+.size-btn:hover {
+  border-color: #4169E1;
+  color: #4169E1;
+  background: rgba(65, 105, 225, 0.05);
+}
+
+.size-btn.active {
+  background: #4169E1;
+  color: #ffffff;
+  border-color: #4169E1;
+}
+
+/* Color Picker */
+.color-picker {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.color-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 3px solid #ffffff;
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+}
+
+/* Icon Grid */
+.icon-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(45px, 1fr));
+  gap: 8px;
+  max-height: 200px;
+  overflow-y: auto;
+  padding: 12px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+}
+
+.icon-btn {
+  width: 45px;
+  height: 45px;
+  background: #ffffff;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  color: #1f2937;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Footer */
+.edit-dialog-footer {
+  background: #ffffff;
+  padding: 20px;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.cancel-btn {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  color: #1f2937;
+  padding: 10px 24px;
+  border-radius: 8px;
+  font-weight: 500;
+}
+
+.save-btn {
+  background: #4169E1;
+  color: #ffffff;
+  border: none;
+  padding: 10px 24px;
+  border-radius: 8px;
+  font-weight: 500;
+}
+
+/* Make sure all buttons are clickable */
+.edit-dialog button,
+.size-btn,
+.color-btn,
+.icon-btn,
+.cancel-btn,
+.save-btn {
+  cursor: pointer;
+  pointer-events: auto !important;
 }

@@ -1,12 +1,75 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import styles from './Sidebar.module.css';
 import { useAuth } from '../../../context/AuthContext';
+
+interface GuideMessage {
+  text: string;
+  position: 'top' | 'right' | 'bottom' | 'left';
+}
 
 const Sidebar: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { logout, userRole } = useAuth();
+  const [eyePosition, setEyePosition] = useState({ x: 0, y: 0 });
+  const [cameraAngle, setCameraAngle] = useState({ x: 0, y: 0 });
+  const [guideMessage, setGuideMessage] = useState<GuideMessage | null>(null);
+  const [isWatching, setIsWatching] = useState(false);
+
+  useEffect(() => {
+    const handleGlobalMouseMove = (e: MouseEvent) => {
+      // Calculate angle based on cursor position relative to viewport center
+      const centerX = window.innerWidth / 2;
+      const centerY = window.innerHeight / 2;
+      
+      // Calculate angles (limited to reasonable range)
+      const angleX = Math.min(Math.max((e.clientX - centerX) / centerX * 20, -20), 20);
+      const angleY = Math.min(Math.max((e.clientY - centerY) / centerY * 20, -20), 20);
+      
+      setCameraAngle({ x: angleX, y: angleY });
+    };
+
+    window.addEventListener('mousemove', handleGlobalMouseMove);
+    return () => window.removeEventListener('mousemove', handleGlobalMouseMove);
+  }, []);
+
+  const getGuideMessage = (pathname: string): GuideMessage => {
+    if (pathname.includes('dashboard')) {
+      return {
+        text: "👋 Need help? Double-click cards to edit, or drag to rearrange!",
+        position: 'right'
+      };
+    } else if (pathname.includes('widgets')) {
+      return {
+        text: "🎯 Create new widgets here or customize existing ones",
+        position: 'right'
+      };
+    } else if (pathname.includes('settings')) {
+      return {
+        text: "⚙️ Configure your preferences and system settings",
+        position: 'right'
+      };
+    }
+    return {
+      text: "👀 I'm watching your workflow! Click me for guidance",
+      position: 'right'
+    };
+  };
+
+  useEffect(() => {
+    setGuideMessage(getGuideMessage(location.pathname));
+  }, [location.pathname]);
+
+  const handleCameraClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsWatching(!isWatching);
+    if (!isWatching) {
+      setGuideMessage(getGuideMessage(location.pathname));
+    } else {
+      setGuideMessage(null);
+    }
+  };
 
   const getAdminSidebarItems = () => [
     {
@@ -156,25 +219,135 @@ const Sidebar: React.FC = () => {
     logout();
   };
 
+  const handleMouseMove = (e: React.MouseEvent) => {
+    const bounds = e.currentTarget.getBoundingClientRect();
+    const x = (e.clientX - bounds.left - bounds.width / 2) / 10;
+    const y = (e.clientY - bounds.top - bounds.height / 2) / 10;
+    setEyePosition({ x, y });
+  };
+
   return (
     <div className={styles.sidebar}>
       <div 
-        className={styles.sidebarLogo} 
-        onClick={() => handleNavigation('dashboard')}
+        className={`${styles.sidebarLogo} ${isWatching ? styles.watching : ''}`}
+        onClick={handleCameraClick}
         role="button"
         tabIndex={0}
       >
-        <svg className={styles.logoIcon} viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <rect width="40" height="40" rx="12" fill="url(#gradient)"/>
-          <path d="M25 15H15C14.4477 15 14 15.4477 14 16V26C14 26.5523 14.4477 27 15 27H25C25.5523 27 26 26.5523 26 26V16C26 15.4477 25.5523 15 25 15Z" 
-            stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-          <defs>
-            <linearGradient id="gradient" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">
-              <stop stopColor="#4F46E5"/>
-              <stop offset="1" stopColor="#6366F1"/>
-            </linearGradient>
-          </defs>
+        <svg className={styles.logoIcon} viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+          {/* Main Camera Body - Adjusted for new viewBox */}
+          <path 
+            d="M10 14C10 12.8954 10.8954 12 12 12H36C37.1046 12 38 12.8954 38 14V34C38 35.1046 37.1046 36 36 36H12C10.8954 36 10 35.1046 10 34V14Z"
+            fill="#4F46E5"
+            style={{
+              transform: `rotate(${cameraAngle.x * 0.2}deg)`,
+              transformOrigin: 'center'
+            }}
+          />
+
+          {/* Camera Mount - Adjusted */}
+          <path 
+            d="M19 36L15 42H33L29 36" 
+            stroke="#4F46E5" 
+            strokeWidth="2.5"
+          />
+
+          {/* Lens Housing - Adjusted */}
+          <circle 
+            cx="24" 
+            cy="24" 
+            r="8" 
+            fill="#1E293B"
+            style={{
+              transform: `translate(${cameraAngle.x * 0.1}px, ${cameraAngle.y * 0.1}px)`,
+            }}
+          />
+
+          {/* Lens - Adjusted */}
+          <circle 
+            cx="24" 
+            cy="24" 
+            r="5" 
+            fill="#6366F1"
+            style={{
+              transform: `translate(${cameraAngle.x * 0.15}px, ${cameraAngle.y * 0.15}px)`,
+            }}
+          />
+
+          {/* Status Light - Adjusted */}
+          <circle cx="33" cy="17" r="2" fill="#EF4444">
+            <animate
+              attributeName="opacity"
+              values="1;0.3;1"
+              dur="2s"
+              repeatCount="indefinite"
+            />
+          </circle>
+
+          {/* Camera Top - Adjusted */}
+          <path 
+            d="M12 12C12 11.4477 12.4477 11 13 11H35C35.5523 11 36 11.4477 36 12V14C36 14.5523 35.5523 15 35 15H13C12.4477 15 12 14.5523 12 14V12Z"
+            fill="#1E293B"
+            style={{
+              transform: `rotate(${cameraAngle.x * 0.2}deg)`,
+              transformOrigin: 'center'
+            }}
+          />
+
+          {/* Camera details - Adjusted */}
+          <path
+            d="M14 17H18"
+            stroke="#6366F1"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+          />
+          
+          {/* Lens reflection - Adjusted */}
+          <circle 
+            cx="22" 
+            cy="22" 
+            r="2" 
+            fill="rgba(255, 255, 255, 0.6)"
+            style={{
+              transform: `translate(${cameraAngle.x * 0.15}px, ${cameraAngle.y * 0.15}px)`,
+            }}
+          />
+
+          {/* Add scanning effect when watching */}
+          {isWatching && (
+            <rect
+              x="10"
+              y="14"
+              width="28"
+              height="20"
+              fill="none"
+              stroke="#6366F1"
+              strokeWidth="0.5"
+              opacity="0.5"
+              className={styles.scanLine}
+            />
+          )}
+          
+          {/* Add pulsing focus ring when active */}
+          {isWatching && (
+            <circle
+              cx="24"
+              cy="24"
+              r="6"
+              stroke="#6366F1"
+              strokeWidth="0.5"
+              fill="none"
+              className={styles.focusRing}
+            />
+          )}
         </svg>
+        
+        {/* Add guide message tooltip */}
+        {guideMessage && (
+          <div className={`${styles.guideMessage} ${styles[guideMessage.position]}`}>
+            {guideMessage.text}
+          </div>
+        )}
       </div>
 
       <nav className={styles.sidebarNav}>

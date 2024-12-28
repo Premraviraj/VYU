@@ -56,8 +56,8 @@ const AppContent: React.FC = () => {
         <Route path="graph" element={<LocalConfigPage />} />
       </Route>
 
-      <Route path="/localhost" element={
-        <ProtectedRoute allowedRole="user">
+      <Route path="/user" element={
+        <ProtectedRoute>
           <MainLayout>
             <Routes>
               <Route path="dashboard" element={<UserHomePage />} />
@@ -65,10 +65,7 @@ const AppContent: React.FC = () => {
             </Routes>
           </MainLayout>
         </ProtectedRoute>
-      }>
-        <Route path="dashboard" element={<UserHomePage />} />
-        <Route path="settings" element={<UserSettings />} />
-      </Route>
+      } />
 
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>

@@ -28,36 +28,14 @@
   cursor: pointer;
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   padding: 0.75rem;
-  border-radius: 20px;
-  background: linear-gradient(135deg,
-    rgba(107, 77, 230, 0.08),
-    rgba(107, 77, 230, 0.03));
-  box-shadow: 
-    0 4px 12px rgba(107, 77, 230, 0.1),
-    inset 0 0 0 1px rgba(107, 77, 230, 0.1);
 }
 
 .sidebarLogo::after {
-  content: '';
-  position: absolute;
-  inset: -8px;
-  background: radial-gradient(circle at center,
-    rgba(107, 77, 230, 0.2),
-    transparent 70%);
-  border-radius: inherit;
-  opacity: 0;
-  transition: opacity 0.3s ease;
+  display: none;
 }
 
 .sidebarLogo:hover {
-  transform: translateY(-2px) scale(1.05);
-  background: linear-gradient(135deg,
-    rgba(107, 77, 230, 0.15),
-    rgba(107, 77, 230, 0.08));
-  box-shadow: 
-    0 8px 24px rgba(107, 77, 230, 0.15),
-    0 4px 8px rgba(107, 77, 230, 0.1),
-    inset 0 0 0 1px rgba(107, 77, 230, 0.2);
+  transform: translateY(-2px);
 }
 
 .sidebarNav {
@@ -348,14 +326,36 @@
 }
 
 .logoIcon {
-  width: 40px;
-  height: 40px;
+  width: 48px;
+  height: 48px;
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
+}
+
+.logoIcon path,
+.logoIcon circle {
+  transition: transform 0.2s ease-out;
 }
 
 .sidebarLogo:hover .logoIcon {
-  transform: scale(1.1);
-  filter: drop-shadow(0 0 12px rgba(107, 77, 230, 0.4));
+  filter: 
+    drop-shadow(0 8px 16px rgba(99, 102, 241, 0.5))
+    drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
+}
+
+/* Enhanced camera movement */
+.logoIcon path[fill="#4F46E5"] {
+  filter: drop-shadow(0 3px 6px rgba(79, 70, 229, 0.4));
+}
+
+.logoIcon circle[fill="#6366F1"] {
+  filter: drop-shadow(0 2px 4px rgba(99, 102, 241, 0.6));
+}
+
+/* Add smooth transitions for camera movement */
+.logoIcon path,
+.logoIcon circle {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .logoutIcon {
@@ -367,4 +367,95 @@
 .logoutButton:hover .logoutIcon {
   transform: rotate(90deg);
   filter: drop-shadow(0 0 8px rgba(239, 68, 68, 0.3));
+}
+
+/* Add these new styles */
+.watching .logoIcon {
+  filter: drop-shadow(0 0 12px rgba(99, 102, 241, 0.6));
+}
+
+/* Scanning effect */
+.scanLine {
+  animation: scan 2s linear infinite;
+}
+
+@keyframes scan {
+  0% {
+    transform: translateY(0) scaleX(0.9);
+    opacity: 0;
+  }
+  50% {
+    opacity: 0.5;
+  }
+  100% {
+    transform: translateY(20px) scaleX(0.9);
+    opacity: 0;
+  }
+}
+
+/* Focus ring effect */
+.focusRing {
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.5;
+  }
+  50% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0.5;
+  }
+}
+
+/* Guide message styles */
+.guideMessage {
+  position: absolute;
+  background: rgba(99, 102, 241, 0.95);
+  color: white;
+  padding: 12px 20px;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  white-space: nowrap;
+  box-shadow: 
+    0 4px 12px rgba(99, 102, 241, 0.2),
+    0 0 0 1px rgba(255, 255, 255, 0.1);
+  animation: fadeIn 0.3s ease-out;
+  z-index: 1000;
+}
+
+.guideMessage.right {
+  left: calc(100% + 16px);
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.guideMessage::before {
+  content: '';
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background: inherit;
+  transform: rotate(45deg);
+}
+
+.guideMessage.right::before {
+  left: -4px;
+  top: 50%;
+  transform: translateY(-50%) rotate(45deg);
+}
+
+/* Enhanced camera active state */
+.watching .logoIcon path[fill="#4F46E5"] {
+  filter: drop-shadow(0 0 8px rgba(99, 102, 241, 0.6));
+}
+
+.watching .logoIcon circle[fill="#6366F1"] {
+  filter: drop-shadow(0 0 8px rgba(99, 102, 241, 0.8));
 } 

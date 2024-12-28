@@ -22,6 +22,7 @@ import {
 } from '@mui/icons-material';
 import { kpiApi } from '../../../api/kpiApi';
 import { toast } from 'react-hot-toast';
+import ClipLoader from "react-spinners/ClipLoader";
 
 // Add debounce utility at the top of the file
 const debounce = (fn: Function, ms = 300) => {
@@ -58,6 +59,13 @@ interface DataItem {
   VideoSource: string;
   Rule: string;
   Count: number;
+}
+
+// Add this interface at the top with other interfaces
+interface RawDataResponse {
+  ruleCounts?: { [key: string]: number };
+  fieldCounts?: { [key: string]: number };
+  data?: any;
 }
 
 // Add this helper function at the top of the file
@@ -181,7 +189,12 @@ const KPIModal: React.FC<KPIModalProps> = ({ isOpen, onClose, selectedData, onKP
   const [availableVideoSources, setAvailableVideoSources] = useState<string[]>([]);
   const [isLoadingVideoSources, setIsLoadingVideoSources] = useState(false);
   const [availableFields, setAvailableFields] = useState<{[key: string]: number}>({});
-  const [rawData, setRawData] = useState<any[]>([]);
+  const [rawData, setRawData] = useState<RawDataResponse | null>(null);
+  const [selectedRules, setSelectedRules] = useState<Array<{
+    rule: string;
+    count: number;
+    source: string;
+  }>>([]);
 
   // Initialize available fields from selectedData
   React.useEffect(() => {
@@ -405,21 +418,27 @@ const KPIModal: React.FC<KPIModalProps> = ({ isOpen, onClose, selectedData, onKP
               <h3 className="kpi-title">{kpiTitle || 'Card Title'}</h3>
             </div>
             <div className="kpi-fields-container">
-              {kpiFields.map((field) => (
-                <div key={field.id} className="field-group">
+              {selectedRules.map((rule, index) => (
+                <div key={index} className="field-group">
                   <div className="field-value">
-                    {Number(field.value).toLocaleString()}
+                    {rule.count.toLocaleString()}
                   </div>
-                  <div className="field-label">{field.label}</div>
+                  <div className="field-label">{rule.rule}</div>
+                  <div className="field-source">Source {rule.source}</div>
                 </div>
               ))}
+              {selectedRules.length === 0 && (
+                <div className="no-rules-message">
+                  Select rules to preview
+                </div>
+              )}
             </div>
           </div>
         </div>
       );
     }
 
-    // Multi-card layout - update the container classes and styling
+    // Multi-card layout
     return (
       <div className="kpi-preview-container">
         <div className="kpi-preview-modern">
@@ -432,14 +451,20 @@ const KPIModal: React.FC<KPIModalProps> = ({ isOpen, onClose, selectedData, onKP
             <h3 className="kpi-title">{kpiTitle || 'Card Title'}</h3>
           </div>
           <div className="kpi-fields-container multi">
-            {kpiFields.map((field) => (
-              <div key={field.id} className="field-group compact">
+            {selectedRules.map((rule, index) => (
+              <div key={index} className="field-group compact">
                 <div className="field-value">
-                  {Number(field.value).toLocaleString()}
+                  {rule.count.toLocaleString()}
                 </div>
-                <div className="field-label">{field.label}</div>
+                <div className="field-label">{rule.rule}</div>
+                <div className="field-source">Source {rule.source}</div>
               </div>
             ))}
+            {selectedRules.length === 0 && (
+              <div className="no-rules-message">
+                Select rules to preview
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -456,40 +481,37 @@ const KPIModal: React.FC<KPIModalProps> = ({ isOpen, onClose, selectedData, onKP
 
   // Update the handleCreateKPI function
   const handleCreateKPI = async () => {
-    const widgetId = `kpi-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-
-    // Format data for KPI collection
-    const kpiCardData = {
-      kpi_id: widgetId,
-      kpi_name: kpiTitle || 'Vehicle Statistics',
-      kpi_type: 'kpi',
-      design_type: selectedKPIType,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      fields: kpiFields.map(field => ({
-        field_id: field.id,
-        field_name: field.label,
-        field_value: field.value,
-        collection_name: field.collection || selectedData[0]?.vehicleType,
-        video_source: field.videoSource || selectedData[0]?.filteredStats?.VideoSource,
-        rule_name: field.label,
-        styling: {
-          color: field.color,
-          size: field.size || 'medium',
-          icon: field.icon
-        }
-      })),
-      config: {
-        refresh_interval: 5000,
-        layout: {
-          columns: 2,
-          gap: '1rem'
-        }
-      }
-    };
-
     try {
-      // Send to VYU API
+      const widgetId = `kpi-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+      // Create separate strings for each field property
+      const kpiCardData = {
+        kpi_id: widgetId,
+        kpi_name: kpiTitle || 'Vehicle Statistics',
+        kpi_type: 'kpi',
+        design_type: 'modern',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        field_id: `${selectedVideoSource}-${selectedRules[0]?.rule}-${Math.random()}`,
+        field_name: selectedRules[0]?.rule?.toString() || '',
+        field_value: selectedRules[0]?.count?.toString() || '0',
+        collection_name: selectedCollection?.toString() || '',
+        video_source: selectedVideoSource?.toString() || '',
+        rule_name: selectedRules[0]?.rule?.toString() || '',
+        style_color: getDefaultColor(selectedRules[0]?.rule || ''),
+        style_size: 'medium',
+        style_icon: 'Dashboard',
+        config: {
+          refresh_interval: 5000,
+          layout: {
+            columns: 2,
+            gap: '1rem'
+          }
+        }
+      };
+
+      console.log('Sending KPI card data:', kpiCardData);
+
       const response = await fetch(`${API_URL}/api/v1/kpiCards`, {
         method: 'POST',
         headers: {
@@ -501,22 +523,18 @@ const KPIModal: React.FC<KPIModalProps> = ({ isOpen, onClose, selectedData, onKP
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => null);
-        console.error('Server error details:', errorData);
-        throw new Error('Failed to save KPI card');
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to create KPI card');
       }
 
-      const savedCard = await response.json();
-      console.log('KPI Card saved successfully:', savedCard);
-
-      // Close modal and notify parent
+      const data = await response.json();
+      console.log('KPI Card created successfully:', data);
+      toast.success('KPI Card created successfully');
       onClose();
       onKPICreated?.();
     } catch (error) {
-      console.error('Error saving KPI card:', error);
-      // Just close the modal on error
-      onClose();
-      onKPICreated?.();
+      console.error('Error creating KPI card:', error);
+      toast.error('Failed to create KPI card');
     }
   };
 
@@ -554,91 +572,113 @@ const KPIModal: React.FC<KPIModalProps> = ({ isOpen, onClose, selectedData, onKP
     `;
   };
 
-  // Add this function to handle layout switching
+  // Update the handleLayoutChange function
   const handleLayoutChange = (newLayout: 'single' | 'multi') => {
-    if (newLayout === 'single' && kpiFields.length > 1) {
-      toast('Cannot switch to single card when multiple fields are selected. Please remove extra fields first.', {
-        icon: '⚠️',
-        style: {
-          background: '#fff7ed',
-          color: '#9a3412',
-          border: '1px solid #fed7aa'
-        }
+    if (newLayout === 'single' && selectedRules.length > 1) {
+      toast.error('Cannot switch to single card when multiple rules are selected. Please remove extra rules first.', {
+        duration: 3000,
+        position: 'bottom-right',
       });
       return;
     }
     setCardLayout(newLayout);
   };
 
-  // Update fetchCollections function to handle different response formats
+  // Update fetchCollections function to match WidgetsPage
   const fetchCollections = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch('http://localhost:8080/api/v1/allCollections', {
+      const response = await fetch(`${API_URL}/api/v1/allCollections`, {
         method: 'GET',
         headers: {
+          'Content-Type': 'application/json',
           'Accept': 'application/json',
-          'Content-Type': 'application/json'
         },
-        credentials: 'include'
+        credentials: 'include',
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        throw new Error('Failed to fetch collections');
       }
 
       const data = await response.json();
-      console.log('Raw collections response:', data); // Debug log
+      console.log('Collections from API:', data);
       
-      // Handle different response formats
-      let collections: string[] = [];
-      
-      if (data) {
-        if (Array.isArray(data)) {
-          // If data is already an array
-          collections = data
-            .filter(item => item && typeof item === 'string')
-            .filter(collection => !['Widgets', 'KpiCards'].includes(collection));
-        } else if (typeof data === 'object') {
-          // If data is an object
-          if (data.collections && Array.isArray(data.collections)) {
-            // If data has a collections array property
-            collections = data.collections
-              .filter(item => item && typeof item === 'string')
-              .filter(collection => !['Widgets', 'KpiCards'].includes(collection));
-          } else {
-            // If data is an object with collection names as keys or values
-            collections = Object.keys(data)
-              .filter(key => !['Widgets', 'KpiCards'].includes(key));
-          }
-        }
-      }
-
-      // Sort collections alphabetically
-      collections.sort();
-      console.log('Processed collections:', collections); // Debug log
-
-      setAvailableCollections(collections);
-      
-      // Select first collection by default if none selected
-      if (collections.length > 0 && !selectedCollection) {
-        setSelectedCollection(collections[0]);
-        fetchVideoSources(collections[0]);
+      if (data && Array.isArray(data.collections)) {
+        setAvailableCollections(data.collections);
+      } else {
+        setAvailableCollections([]);
       }
     } catch (error) {
       console.error('Failed to fetch collections:', error);
-      toast.error('Failed to fetch collections');
+      toast.error('Failed to load collections data');
+      setAvailableCollections([]);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Update fetchVideoSources function
-  const fetchVideoSources = async (collection: string) => {
+  // Update handleCollectionClick function to match WidgetsPage
+  const handleCollectionClick = async (collectionName: string) => {
     try {
-      setIsLoadingVideoSources(true);
+      setSelectedCollection(collectionName);
+      
+      // Fetch video sources and collection data simultaneously
+      const [sourcesResponse, collectionResponse] = await Promise.all([
+        fetch(
+          `${API_URL}/api/v1/Collection/videoSources?collection=${encodeURIComponent(collectionName)}`,
+          {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+            },
+            credentials: 'include',
+          }
+        ),
+        fetch(
+          `${API_URL}/api/v1/Collection/filtered/count?collection=${encodeURIComponent(collectionName)}`,
+          {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+            },
+            credentials: 'include',
+          }
+        )
+      ]);
+
+      if (!sourcesResponse.ok || !collectionResponse.ok) {
+        throw new Error(`Failed to fetch data for ${collectionName}`);
+      }
+
+      const [sourcesData, collectionData] = await Promise.all([
+        sourcesResponse.json(),
+        collectionResponse.json()
+      ]);
+
+      console.log('Video sources data:', sourcesData);
+      console.log('Collection data:', collectionData);
+      
+      // Extract sources from the response
+      const sources = sourcesData.videoSources ? sourcesData.videoSources.map((vs: any) => vs.source) : [];
+      
+      // Get all unique video sources
+      const uniqueSources = Array.from(new Set([
+        ...sources,
+        ...(collectionData.data ? collectionData.data.map((item: any) => item.VideoSource) : [])
+      ]));
+
+      setAvailableVideoSources(uniqueSources);
+      
+      // Use the first video source
+      const initialSource = uniqueSources[0] || '1';
+      setSelectedVideoSource(initialSource);
+      
+      // Fetch rule counts for the selected source
       const response = await fetch(
-        `http://localhost:8080/api/v1/Collection/videoSources?collection=${encodeURIComponent(collection)}`,
+        `${API_URL}/api/v1/Collection/filtered/count?collection=${encodeURIComponent(collectionName)}&VideoSource=${encodeURIComponent(initialSource)}`,
         {
           method: 'GET',
           headers: {
@@ -650,117 +690,28 @@ const KPIModal: React.FC<KPIModalProps> = ({ isOpen, onClose, selectedData, onKP
       );
 
       if (!response.ok) {
-        throw new Error(`Failed to fetch video sources for ${collection}`);
+        throw new Error(`Failed to fetch data for ${collectionName}`);
       }
 
       const data = await response.json();
-      console.log(`Video sources for ${collection}:`, data);
+      console.log('Collection data:', data);
       
-      // Extract just the source values and set them in state
-      const sources = data.videoSources.map((vs: { source: string }) => vs.source);
-      setAvailableVideoSources(sources);
-      
-      // If we have sources, set the first one as selected
-      if (sources.length > 0) {
-        setSelectedVideoSource(sources[0]);
-        
-        // Fetch data for the first source
-        const dataResponse = await fetch(
-          `http://localhost:8080/api/v1/Collection/data?collectionName=${encodeURIComponent(collection)}&VideoSource=${encodeURIComponent(sources[0])}`,
-          {
-            method: 'GET',
-            headers: {
-              'Content-Type': 'application/json',
-              'Accept': 'application/json',
-            },
-            credentials: 'include',
-          }
-        );
-
-        if (!dataResponse.ok) {
-          throw new Error(`Failed to fetch data for ${collection}`);
-        }
-
-        const sourceData = await dataResponse.json();
-        console.log('Source data:', sourceData);
-        
-        // Ensure sourceData is an array
-        const dataArray = Array.isArray(sourceData) ? sourceData : 
-                         sourceData.data ? sourceData.data :
-                         sourceData.documents ? sourceData.documents : [];
-        
-        setRawData(dataArray);
-
-        // Process the fields
-        const fieldCounts = dataArray.reduce((acc: { [key: string]: number }, item: any) => {
-          if (item.Rule) {
-            acc[item.Rule] = (acc[item.Rule] || 0) + (item.Count || 1);
-          }
-          return acc;
-        }, {});
-        
-        setAvailableFields(fieldCounts);
+      if (data && typeof data === 'object') {
+        setAvailableFields(data.fieldCounts || {});
+        setRawData(data);
       }
 
     } catch (error) {
-      console.error('Error fetching video sources:', error);
-      toast.error(`Failed to load video sources for ${collection}`);
-    } finally {
-      setIsLoadingVideoSources(false);
+      console.error('Error fetching data:', error);
+      toast.error(`Failed to load data for ${collectionName}`);
     }
   };
 
-  // Update fetchFields function to use localhost:8080
-  const fetchFields = async (collection: string, videoSource: string) => {
-    if (!collection || !videoSource) return;
-    
-    try {
-      const response = await fetch(
-        `http://localhost:8080/api/v1/Collection/filtered/count?collection=${encodeURIComponent(collection)}&VideoSource=${encodeURIComponent(videoSource)}`,
-        {
-          method: 'GET',
-          headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json'
-          },
-          credentials: 'include'
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      setAvailableFields(data.fieldCounts || {});
-    } catch (error) {
-      console.error('Failed to fetch fields:', error);
-      toast.error('Failed to fetch fields');
-    }
-  };
-
-  // Add useEffect to fetch collections on mount
-  useEffect(() => {
-    if (isOpen) {
-      fetchCollections();
-    }
-  }, [isOpen]);
-
-  // Add these handlers
-  const handleCollectionClick = (collection: string) => {
-    setSelectedCollection(collection);
-    setSelectedVideoSource('');
-    setAvailableFields({});
-    fetchVideoSources(collection);
-  };
-
-  // Update the handleSourceClick function
+  // Update handleSourceClick function
   const handleSourceClick = async (source: string) => {
     try {
-      setSelectedVideoSource(source);
-      
       const response = await fetch(
-        `http://localhost:8080/api/v1/Collection/data?collectionName=${encodeURIComponent(selectedCollection)}&VideoSource=${encodeURIComponent(source)}`,
+        `${API_URL}/api/v1/Collection/filtered/count?collection=${encodeURIComponent(selectedCollection)}&VideoSource=${encodeURIComponent(source)}`,
         {
           method: 'GET',
           headers: {
@@ -775,30 +726,19 @@ const KPIModal: React.FC<KPIModalProps> = ({ isOpen, onClose, selectedData, onKP
         throw new Error(`Failed to fetch data for source ${source}`);
       }
 
-      const responseData = await response.json();
-      console.log('Source data received:', responseData);
+      const data = await response.json();
+      console.log('Raw API response:', data);
       
-      // Process the data to get rules and counts
-      const processedData = Array.isArray(responseData) ? responseData : 
-                           responseData.data ? responseData.data :
-                           responseData.documents ? responseData.documents : [];
-      
-      // Group by rules and sum their counts
-      const ruleData = processedData.reduce((acc: { [key: string]: number }, item: any) => {
-        const rule = item.Rule;
-        if (rule) {
-          acc[rule] = (acc[rule] || 0) + (item.Count || 1);
-        }
-        return acc;
-      }, {});
-
-      console.log('Processed rule data:', ruleData);
-      setRawData(processedData);
-      setAvailableFields(ruleData);
-
+      if (data && typeof data === 'object') {
+        setSelectedVideoSource(source);
+        // Use ruleCounts from raw response if available, otherwise use fieldCounts
+        const counts = data.ruleCounts || data.fieldCounts || {};
+        setAvailableFields(counts);
+        setRawData(data);
+      }
     } catch (error) {
-      console.error('Error fetching source data:', error);
-      toast.error(`Failed to load data for source ${source}`);
+      console.error('Error fetching data:', error);
+      toast.error(`Failed to load data for video source ${source}`);
     }
   };
 
@@ -806,34 +746,29 @@ const KPIModal: React.FC<KPIModalProps> = ({ isOpen, onClose, selectedData, onKP
   const renderSourceData = () => {
     if (!selectedVideoSource || !rawData) return null;
 
-    // Filter data for selected source
-    const sourceData = rawData.filter((item: DataItem) => 
-      item.VideoSource?.toString() === selectedVideoSource
-    );
-
-    // Group by rules and sum their counts
-    const ruleCounts = sourceData.reduce((acc: { [key: string]: number }, item: any) => {
-      if (item.Rule) {
-        acc[item.Rule] = (acc[item.Rule] || 0) + (item.Count || 1);
-      }
-      return acc;
-    }, {});
-
     return (
       <div className="source-data-section">
         <h4>Rules for Source {selectedVideoSource}</h4>
-        <div className="data-grid">
-          {Object.entries(ruleCounts).map(([rule, count]) => (
-            <div key={rule} className="data-card">
-              <div className="data-card-header">
-                <div className="rule-icon">
-                  {iconMap[rule] || <Assessment />}
-                </div>
+        <div className="rules-grid">
+          {Object.entries(availableFields).map(([rule, count], index) => (
+            <div key={`${rule}-${index}`} className="rule-card" onClick={(e) => e.stopPropagation()}>
+              <div className="rule-card-header">
                 <h5>{rule}</h5>
+                <span className="rule-count-badge">
+                  {typeof count === 'number' ? count : 0}
+                </span>
               </div>
-              <div className="data-value">
-                <div className="count-value">{count}</div>
-                <div className="data-label">Count</div>
+              <div className="rule-card-body">
+                <div className="rule-info">
+                  <span className="source-label">Source:</span>
+                  <span className="source-value">{selectedVideoSource}</span>
+                </div>
+                <div className="rule-info">
+                  <span className="update-label">Last Updated:</span>
+                  <span className="update-value">
+                    {new Date().toLocaleTimeString()}
+                  </span>
+                </div>
               </div>
             </div>
           ))}
@@ -842,57 +777,110 @@ const KPIModal: React.FC<KPIModalProps> = ({ isOpen, onClose, selectedData, onKP
     );
   };
 
-  // Update the renderDataSelection function
+  // Update the renderDataSelection function to include the preview section
   const renderDataSelection = () => (
     <div className="config-section data-selection">
       <h3>Data Selection</h3>
       
-      {/* Collections Section */}
-      <div className="selection-group collections">
-        <h4>Select Collection</h4>
+      <div className="data-selection-section">
         {isLoading ? (
-          <div className="loading-spinner">Loading collections...</div>
+          <div className="loading-container">
+            <ClipLoader size={50} color="#4f46e5" />
+            <span className="loading-text">Loading Collections...</span>
+          </div>
         ) : (
-          <div className="collection-grid">
-            {availableCollections.map(collection => (
-              <div
-                key={collection}
-                className={`collection-card ${selectedCollection === collection ? 'expanded' : ''}`}
-                onClick={() => handleCollectionClick(collection)}
-              >
-                <div className="collection-header">
-                  <StorageRounded className="collection-icon" />
-                  <h3>{collection}</h3>
-                </div>
-                
-                {/* Expanded content */}
-                {selectedCollection === collection && (
-                  <div className="expanded-content">
-                    <div className="video-source-selection">
-                      <h4>Video Sources</h4>
-                      <div className="source-buttons">
-                        {availableVideoSources.map(source => (
-                          <button
-                            key={source}
-                            className={`source-button ${selectedVideoSource === source ? 'selected' : ''}`}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleSourceClick(source);
-                            }}
-                          >
-                            Source {source}
-                          </button>
-                        ))}
+          <>
+            <div className="collections-grid">
+              {availableCollections.map(collection => (
+                <div
+                  key={collection}
+                  className={`collection-card ${selectedCollection === collection ? 'expanded' : ''}`}
+                  onClick={() => handleCollectionClick(collection)}
+                >
+                  <div className="collection-header">
+                    <StorageRounded className="collection-icon" />
+                    <h3>{collection}</h3>
+                  </div>
+                  
+                  {/* Expanded content */}
+                  {selectedCollection === collection && (
+                    <div className="expanded-content">
+                      <div className="content-wrapper">
+                        <div className="video-source-section">
+                          <h4>Video Sources</h4>
+                          <div className="source-buttons">
+                            {availableVideoSources.map(source => (
+                              <button
+                                key={source}
+                                className={`source-button ${selectedVideoSource === source ? 'selected' : ''}`}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleSourceClick(source);
+                                }}
+                              >
+                                Source {source}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="rules-section">
+                          <h4>Rule Counts</h4>
+                          {rawData && (
+                            <div className="rules-grid">
+                              {Object.entries(rawData.ruleCounts || rawData.fieldCounts || {}).map(([rule, count], index) => (
+                                <div 
+                                  key={`${rule}-${index}`} 
+                                  className={`rule-card ${selectedRules.some(r => r.rule === rule) ? 'selected' : ''}`}
+                                  onClick={() => handleRuleSelect(rule, count as number)}
+                                >
+                                  <div className="rule-card-header">
+                                    <h5>{rule}</h5>
+                                    <span className="rule-count-badge">
+                                      {typeof count === 'number' ? count : 0}
+                                    </span>
+                                  </div>
+                                  {selectedRules.some(r => r.rule === rule) && (
+                                    <button 
+                                      className="remove-rule"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setSelectedRules(prev => prev.filter(r => r.rule !== rule));
+                                      }}
+                                    >
+                                      ×
+                                    </button>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
+                  )}
+                </div>
+              ))}
+            </div>
 
-                    {/* Display rules and counts when source is selected */}
-                    {selectedVideoSource && renderSourceData()}
-                  </div>
-                )}
+            {/* Add Selected Rules Preview Section */}
+            {selectedRules.length > 0 && (
+              <div className="selected-rules-preview">
+                <h4>Selected Rules</h4>
+                <div className="selected-rules-grid">
+                  {selectedRules.map((rule, index) => (
+                    <div key={index} className="preview-rule-card">
+                      <div className="preview-rule-info">
+                        <span className="preview-rule-name">{rule.rule}</span>
+                        <span className="preview-rule-source">Source {rule.source}</span>
+                      </div>
+                      <span className="preview-rule-count">{rule.count}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
-            ))}
-          </div>
+            )}
+          </>
         )}
       </div>
     </div>
@@ -1070,6 +1058,128 @@ const KPIModal: React.FC<KPIModalProps> = ({ isOpen, onClose, selectedData, onKP
       font-weight: 600;
       color: #4f46e5;
     }
+
+    /* Rule Card Selection Styles */
+    .rule-card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 1rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      position: relative;
+    }
+
+    .rule-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 4px;
+      height: 0;
+      background: #4f46e5;
+      transition: height 0.2s ease;
+      border-radius: 12px 0 0 12px;
+    }
+
+    .rule-card:hover {
+      background: #f1f5f9;
+      border-color: #4f46e5;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    }
+
+    .rule-card.selected {
+      background: #f8fafc;
+      border-color: #4f46e5;
+      box-shadow: 0 4px 12px rgba(79, 70, 229, 0.1);
+    }
+
+    .rule-card.selected::before {
+      height: 100%;
+    }
+
+    /* Preview Section for Selected Rules */
+    .selected-rules-preview {
+      margin-top: 2rem;
+      padding: 1.5rem;
+      background: #ffffff;
+      border-radius: 12px;
+      border: 1px solid #e2e8f0;
+    }
+
+    .selected-rules-preview h4 {
+      color: #1e293b;
+      font-size: 1rem;
+      margin: 0 0 1rem 0;
+      font-weight: 600;
+    }
+
+    .selected-rules-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 1rem;
+    }
+
+    .preview-rule-card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .preview-rule-info {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .preview-rule-name {
+      color: #1e293b;
+      font-weight: 600;
+      font-size: 0.875rem;
+    }
+
+    .preview-rule-source {
+      color: #64748b;
+      font-size: 0.75rem;
+    }
+
+    .preview-rule-count {
+      background: #4f46e5;
+      color: white;
+      font-size: 0.875rem;
+      font-weight: 600;
+      padding: 0.25rem 0.75rem;
+      border-radius: 6px;
+    }
+
+    /* Remove Rule Button */
+    .remove-rule {
+      position: absolute;
+      top: 0.5rem;
+      right: 0.5rem;
+      background: none;
+      border: none;
+      color: #94a3b8;
+      cursor: pointer;
+      padding: 0.25rem;
+      border-radius: 50%;
+      opacity: 0;
+      transition: all 0.2s ease;
+    }
+
+    .rule-card:hover .remove-rule {
+      opacity: 1;
+    }
+
+    .remove-rule:hover {
+      color: #ef4444;
+      background: rgba(239, 68, 68, 0.1);
+    }
   `;
 
   // Add this useEffect for the mouse movement effect
@@ -1097,6 +1207,39 @@ const KPIModal: React.FC<KPIModalProps> = ({ isOpen, onClose, selectedData, onKP
       });
     };
   }, [selectedCollection]); // Re-run when selectedCollection changes
+
+  // Add this useEffect near the top of the component, with other useEffects
+  useEffect(() => {
+    if (isOpen) {
+      fetchCollections();
+    }
+  }, [isOpen]);
+
+  // Update the handleRuleSelect function
+  const handleRuleSelect = (rule: string, count: number) => {
+    const isAlreadySelected = selectedRules.some(r => r.rule === rule);
+    
+    if (cardLayout === 'single' && !isAlreadySelected && selectedRules.length >= 1) {
+      toast.error('Only one rule can be selected in single card layout', {
+        duration: 3000,
+        position: 'bottom-right',
+      });
+      return;
+    }
+
+    setSelectedRules(prev => {
+      if (isAlreadySelected) {
+        return prev.filter(r => r.rule !== rule);
+      }
+      return [...prev, { 
+        rule, 
+        count, 
+        source: selectedVideoSource 
+      }];
+    });
+
+    console.log('Selected rule:', { rule, count, source: selectedVideoSource });
+  };
 
   if (!isOpen) return null;
 
@@ -1126,7 +1269,7 @@ const KPIModal: React.FC<KPIModalProps> = ({ isOpen, onClose, selectedData, onKP
               <h3>Card Layout</h3>
               <div className="layout-options">
                 <div 
-                  className={`layout-option ${cardLayout === 'single' ? 'active' : ''} ${kpiFields.length > 1 ? 'disabled' : ''}`}
+                  className={`layout-option ${cardLayout === 'single' ? 'active' : ''} ${selectedRules.length > 1 ? 'disabled' : ''}`}
                   onClick={() => handleLayoutChange('single')}
                 >
                   <div className="layout-icon single">
