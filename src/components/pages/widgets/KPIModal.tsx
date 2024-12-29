@@ -177,12 +177,10 @@ interface DataItem {
 
 const KPIModal: React.FC<KPIModalProps> = ({ isOpen, onClose, selectedData, onKPICreated }) => {
   const [kpiTitle, setKpiTitle] = useState('');
-  const [selectedKPIType, setSelectedKPIType] = useState<string>('modern');
   const [kpiFields, setKpiFields] = useState<KPIField[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [realTimeValues, setRealTimeValues] = useState<{[key: string]: number}>({});
   const [graphTitle, setGraphTitle] = useState('');
-  const [cardLayout, setCardLayout] = useState<'single' | 'multi'>('single');
   const [availableCollections, setAvailableCollections] = useState<string[]>([]);
   const [selectedCollection, setSelectedCollection] = useState<string>('');
   const [selectedVideoSource, setSelectedVideoSource] = useState<string>('');
@@ -274,10 +272,6 @@ const KPIModal: React.FC<KPIModalProps> = ({ isOpen, onClose, selectedData, onKP
   const handleRemoveField = (fieldId: string) => {
     setKpiFields(prev => prev.filter(field => field.id !== fieldId));
   };
-
-  const kpiTypes = [
-    { type: 'modern', label: 'Modern Design', description: 'Clean and modern look with real-time updates' }
-  ];
 
   // Update the fetchFieldData function
   const fetchFieldData = async (field: KPIField) => {
@@ -405,40 +399,6 @@ const KPIModal: React.FC<KPIModalProps> = ({ isOpen, onClose, selectedData, onKP
 
   // Update the preview content section
   const getPreviewContent = () => {
-    if (cardLayout === 'single') {
-      return (
-        <div className="kpi-preview-container">
-          <div className="kpi-preview-modern">
-            <div className="kpi-header">
-              <div className="kpi-icon">
-                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" fill="currentColor"/>
-                </svg>
-              </div>
-              <h3 className="kpi-title">{kpiTitle || 'Card Title'}</h3>
-            </div>
-            <div className="kpi-fields-container">
-              {selectedRules.map((rule, index) => (
-                <div key={index} className="field-group">
-                  <div className="field-value">
-                    {rule.count.toLocaleString()}
-                  </div>
-                  <div className="field-label">{rule.rule}</div>
-                  <div className="field-source">Source {rule.source}</div>
-                </div>
-              ))}
-              {selectedRules.length === 0 && (
-                <div className="no-rules-message">
-                  Select rules to preview
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    // Multi-card layout
     return (
       <div className="kpi-preview-container">
         <div className="kpi-preview-modern">
@@ -450,9 +410,9 @@ const KPIModal: React.FC<KPIModalProps> = ({ isOpen, onClose, selectedData, onKP
             </div>
             <h3 className="kpi-title">{kpiTitle || 'Card Title'}</h3>
           </div>
-          <div className="kpi-fields-container multi">
+          <div className="kpi-fields-container">
             {selectedRules.map((rule, index) => (
-              <div key={index} className="field-group compact">
+              <div key={index} className="field-group">
                 <div className="field-value">
                   {rule.count.toLocaleString()}
                 </div>
@@ -484,7 +444,7 @@ const KPIModal: React.FC<KPIModalProps> = ({ isOpen, onClose, selectedData, onKP
     try {
       const widgetId = `kpi-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-      // Create separate strings for each field property
+      // Create KPI card data with all selected rules
       const kpiCardData = {
         kpi_id: widgetId,
         kpi_name: kpiTitle || 'Vehicle Statistics',
@@ -492,15 +452,17 @@ const KPIModal: React.FC<KPIModalProps> = ({ isOpen, onClose, selectedData, onKP
         design_type: 'modern',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-        field_id: `${selectedVideoSource}-${selectedRules[0]?.rule}-${Math.random()}`,
-        field_name: selectedRules[0]?.rule?.toString() || '',
-        field_value: selectedRules[0]?.count?.toString() || '0',
-        collection_name: selectedCollection?.toString() || '',
-        video_source: selectedVideoSource?.toString() || '',
-        rule_name: selectedRules[0]?.rule?.toString() || '',
-        style_color: getDefaultColor(selectedRules[0]?.rule || ''),
-        style_size: 'medium',
-        style_icon: 'Dashboard',
+        rules: selectedRules.map(rule => ({
+          field_id: `${rule.source}-${rule.rule}-${Math.random()}`,
+          field_name: rule.rule,
+          field_value: rule.count.toString(),
+          collection_name: selectedCollection,
+          video_source: rule.source,
+          rule_name: rule.rule,
+          style_color: getDefaultColor(rule.rule),
+          style_size: 'medium',
+          style_icon: 'Dashboard',
+        })),
         config: {
           refresh_interval: 5000,
           layout: {
@@ -538,50 +500,26 @@ const KPIModal: React.FC<KPIModalProps> = ({ isOpen, onClose, selectedData, onKP
     }
   };
 
-  // Helper function to generate KPI content
+  // Update the generateKPIContent function
   const generateKPIContent = (widgetId: string, fields: KPIField[]) => {
     return `
-      <div class="kpi-widget kpi-${selectedKPIType}" id="${widgetId}">
+      <div class="kpi-widget modern" id="${widgetId}">
         <div class="kpi-header">
           <h3 class="kpi-title">${kpiTitle || 'Vehicle Statistics'}</h3>
         </div>
         <div class="kpi-fields">
-          ${fields.map(field => {
-            const collection = field.collection || selectedData[0]?.vehicleType;
-            const videoSource = field.videoSource || selectedData[0]?.filteredStats?.VideoSource;
-            
-            return `
-              <div 
-                class="kpi-field ${field.size || 'medium'}"
-                data-field-id="${field.id}"
-                data-type="${field.label}"
-                data-collection="${collection}"
-                data-video-source="${videoSource}"
-                style="color: ${field.color};"
-              >
-                ${field.icon ? `<div class="field-icon">${field.icon}</div>` : ''}
-                <div class="field-value">
-                  ${field.value}
-                </div>
-                <div class="field-label">${field.label}</div>
+          ${selectedRules.map(rule => `
+            <div class="kpi-field medium">
+              <div class="field-value">
+                ${rule.count.toLocaleString()}
               </div>
-            `;
-          }).join('')}
+              <div class="field-label">${rule.rule}</div>
+              <div class="field-source">Source ${rule.source}</div>
+            </div>
+          `).join('')}
         </div>
       </div>
     `;
-  };
-
-  // Update the handleLayoutChange function
-  const handleLayoutChange = (newLayout: 'single' | 'multi') => {
-    if (newLayout === 'single' && selectedRules.length > 1) {
-      toast.error('Cannot switch to single card when multiple rules are selected. Please remove extra rules first.', {
-        duration: 3000,
-        position: 'bottom-right',
-      });
-      return;
-    }
-    setCardLayout(newLayout);
   };
 
   // Update fetchCollections function to match WidgetsPage
@@ -1219,14 +1157,6 @@ const KPIModal: React.FC<KPIModalProps> = ({ isOpen, onClose, selectedData, onKP
   const handleRuleSelect = (rule: string, count: number) => {
     const isAlreadySelected = selectedRules.some(r => r.rule === rule);
     
-    if (cardLayout === 'single' && !isAlreadySelected && selectedRules.length >= 1) {
-      toast.error('Only one rule can be selected in single card layout', {
-        duration: 3000,
-        position: 'bottom-right',
-      });
-      return;
-    }
-
     setSelectedRules(prev => {
       if (isAlreadySelected) {
         return prev.filter(r => r.rule !== rule);
@@ -1262,50 +1192,6 @@ const KPIModal: React.FC<KPIModalProps> = ({ isOpen, onClose, selectedData, onKP
               placeholder="Enter KPI title"
               className="kpi-title-input"
             />
-          </div>
-
-          <div className="config-section">
-            <div className="layout-selector">
-              <h3>Card Layout</h3>
-              <div className="layout-options">
-                <div 
-                  className={`layout-option ${cardLayout === 'single' ? 'active' : ''} ${selectedRules.length > 1 ? 'disabled' : ''}`}
-                  onClick={() => handleLayoutChange('single')}
-                >
-                  <div className="layout-icon single">
-                    <div className="icon-box"></div>
-                  </div>
-                  <span>Single Card</span>
-                </div>
-                <div 
-                  className={`layout-option ${cardLayout === 'multi' ? 'active' : ''}`}
-                  onClick={() => handleLayoutChange('multi')}
-                >
-                  <div className="layout-icon multi">
-                    <div className="icon-box"></div>
-                    <div className="icon-box"></div>
-                  </div>
-                  <span>Multiple Cards</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* KPI Type Selection */}
-          <div className="config-section">
-            <h3>Select Design</h3>
-            <div className="kpi-types-grid">
-              {kpiTypes.map(type => (
-                <div
-                  key={type.type}
-                  className={`kpi-type-option ${selectedKPIType === type.type ? 'selected' : ''}`}
-                  onClick={() => setSelectedKPIType(type.type)}
-                >
-                  <h4>{type.label}</h4>
-                  <p>{type.description}</p>
-                </div>
-              ))}
-            </div>
           </div>
 
           {renderDataSelection()}

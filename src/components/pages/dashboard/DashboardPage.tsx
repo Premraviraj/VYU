@@ -33,6 +33,8 @@ import { API_URL } from '../../../utils/config';
 import { ReceivedKpiData } from '../../../types/kpiTypes';
 import type { DashboardKPICard } from '../../../types/kpiTypes';
 import axios from 'axios';
+import ReactDOMServer from 'react-dom/server';
+import ReactDOM from 'react-dom';
 // import { createStyles } from '@mui/styles';
 
 interface KPICardData {
@@ -703,6 +705,97 @@ const EditDialog: React.FC<EditDialogProps> = ({ isOpen, onClose, widget, onSave
 
   if (!isOpen || !widget) return null;
 
+  const handleSettingChange = (type: 'size' | 'color' | 'icon', value: string) => {
+    setSettings(prev => ({ ...prev, [type]: value }));
+    
+    if (widget) {
+      const widgetElement = document.querySelector(`[data-grid-id="${widget.id}"]`) as HTMLElement;
+      const cardElement = widgetElement?.querySelector('.kpi-card.front') as HTMLElement;
+      
+      if (widgetElement && cardElement) {
+        switch(type) {
+          case 'size':
+            // Update grid item size
+            const gridItem = widgetElement.closest('.react-grid-item');
+            if (gridItem) {
+              let newW = 4, newH = 3; // default medium size
+              
+              switch(value) {
+                case 'small':
+                  newW = 3;
+                  newH = 2;
+                  break;
+                case 'medium':
+                  newW = 4;
+                  newH = 3;
+                  break;
+                case 'large':
+                  newW = 5;
+                  newH = 4;
+                  break;
+              }
+              
+              // Update grid item attributes
+              gridItem.setAttribute('data-grid', JSON.stringify({
+                w: newW,
+                h: newH,
+                minW: newW,
+                minH: newH
+              }));
+              
+              // Force grid to update using requestAnimationFrame
+              requestAnimationFrame(() => {
+                const evt = document.createEvent('UIEvents');
+                evt.initUIEvent('resize', true, false, window, 0);
+                window.dispatchEvent(evt);
+              });
+            }
+            
+            // Remove all size classes
+            ['small', 'medium', 'large'].forEach(size => {
+              widgetElement.classList.remove(size);
+              cardElement.classList.remove(size);
+            });
+            // Add new size class
+            widgetElement.classList.add(value);
+            cardElement.classList.add(value);
+            break;
+            
+          case 'color':
+            if (cardElement) {
+              cardElement.style.setProperty('--hover-color', value);
+              cardElement.style.setProperty('--card-color', value);
+              // Also update the back card color
+              const backCard = widgetElement?.querySelector('.kpi-card.back') as HTMLElement;
+              if (backCard) {
+                backCard.style.backgroundColor = value;
+              }
+            }
+            break;
+            
+          case 'icon':
+            const iconContainer = cardElement.querySelector('.background-icon');
+            if (iconContainer && iconMap[value]) {
+              // Clear existing content
+              iconContainer.innerHTML = '';
+              // Create a new SVG container
+              const svgContainer = document.createElement('div');
+              svgContainer.style.width = '100%';
+              svgContainer.style.height = '100%';
+              // Render the new icon
+              const IconComponent = iconMap[value];
+              const tempDiv = document.createElement('div');
+              ReactDOM.render(IconComponent, tempDiv);
+              svgContainer.innerHTML = tempDiv.innerHTML;
+              // Append the new icon
+              iconContainer.appendChild(svgContainer);
+            }
+            break;
+        }
+      }
+    }
+  };
+
   return (
     <div className="edit-dialog-overlay">
       <div className="edit-dialog">
@@ -719,7 +812,7 @@ const EditDialog: React.FC<EditDialogProps> = ({ isOpen, onClose, widget, onSave
                 <button
                   key={size}
                   className={`size-btn ${settings.size === size ? 'active' : ''}`}
-                  onClick={() => setSettings({ ...settings, size })}
+                  onClick={() => handleSettingChange('size', size)}
                 >
                   {size.charAt(0).toUpperCase() + size.slice(1)}
                 </button>
@@ -736,7 +829,7 @@ const EditDialog: React.FC<EditDialogProps> = ({ isOpen, onClose, widget, onSave
                   key={color}
                   className={`color-btn ${settings.color === color ? 'active' : ''}`}
                   style={{ backgroundColor: color }}
-                  onClick={() => setSettings({ ...settings, color })}
+                  onClick={() => handleSettingChange('color', color)}
                 />
               ))}
             </div>
@@ -750,7 +843,7 @@ const EditDialog: React.FC<EditDialogProps> = ({ isOpen, onClose, widget, onSave
                 <button
                   key={name}
                   className={`icon-btn ${settings.icon === name ? 'active' : ''}`}
-                  onClick={() => setSettings({ ...settings, icon: name })}
+                  onClick={() => handleSettingChange('icon', name)}
                 >
                   {icon}
                 </button>
@@ -834,18 +927,39 @@ const DashboardPage: React.FC = () => {
     }
   };
 
-  // Default layout configuration with specific dimensions
-  const defaultLayout = widgets.map((widget, index) => ({
-    i: widget.id,
-    x: (index % 3) * 4,
-    y: Math.floor(index / 3) * 4,
-    w: 4,
-    h: 3,
-    minW: 3,
-    minH: 2,
-    maxW: 6,
-    maxH: 4
-  }));
+  // Update the defaultLayout calculation to consider widget sizes
+  const defaultLayout = widgets.map((widget, index) => {
+    let w = 4; // default width
+    let h = 3; // default height
+    
+    // Adjust grid units based on widget size
+    if ('style_size' in widget) {
+      switch(widget.style_size) {
+        case 'small':
+          w = 3;
+          h = 2;
+          break;
+        case 'medium':
+          w = 4;
+          h = 3;
+          break;
+        case 'large':
+          w = 5;
+          h = 4;
+          break;
+      }
+    }
+
+    return {
+      i: widget.id,
+      x: (index % 3) * w,
+      y: Math.floor(index / 3) * h,
+      w,
+      h,
+      minW: w,
+      minH: h
+    };
+  });
 
   const handleResize = (layout: any, oldItem: any, newItem: any) => {
     const newWidth = newItem.w * 100;
@@ -876,6 +990,8 @@ const DashboardPage: React.FC = () => {
     if ('type' in widget && widget.type === 'kpi') {
       const kpiWidget = widget as DashboardKPICard;
       const isFlipped = flippedCardId === kpiWidget.id;
+      const sizeClass = kpiWidget.style_size || 'medium';
+      const currentIcon = kpiWidget.style_icon || 'Dashboard';
 
       const handleContextMenu = (e: React.MouseEvent) => {
         // Only trigger if Ctrl key is pressed
@@ -887,56 +1003,45 @@ const DashboardPage: React.FC = () => {
 
       return (
         <div 
-          className="widget-item-wrapper"
+          className={`kpi-card-container ${isFlipped ? 'flipped' : ''}`}
           onContextMenu={handleContextMenu}
           data-tooltip={isFlipped ? 'Click anywhere to unflip' : 'Ctrl + Right Click to flip'}
-          style={{ 
-            cursor: isFlipped ? 'default' : 'pointer',
-            pointerEvents: 'all'  // Ensure the wrapper can still receive events
-          }}
         >
-          <div className={`kpi-card-container ${isFlipped ? 'flipped' : ''}`}>
-            <div className="kpi-card-flipper">
-              {/* Front of card */}
-              <div className="kpi-card front">
-                <h3 className="kpi-card-title">
-                  {kpiWidget.kpi_name}
-                </h3>
-                <div className="kpi-card-content">
-                  <div className="kpi-value">
-                    {kpiWidget.field_value}
-                  </div>
-                  <div className="kpi-name">
-                    {kpiWidget.field_name}
-                  </div>
-                  <div className="kpi-source">
-                    Source {kpiWidget.video_source}
-                  </div>
-                </div>
+          <div className="kpi-card-flipper">
+            {/* Front of card */}
+            <div className={`kpi-card front ${sizeClass}`}>
+              <div className="background-icon">
+                {iconMap[currentIcon]}
               </div>
+              <h3 className="kpi-card-title">{kpiWidget.kpi_name}</h3>
+              <div className="kpi-card-content">
+                <div className="kpi-value">{kpiWidget.field_value}</div>
+                <div className="kpi-name">{kpiWidget.field_name}</div>
+                <div className="kpi-source">Source {kpiWidget.video_source}</div>
+              </div>
+            </div>
 
-              {/* Back of card */}
-              <div className="kpi-card back">
-                <div className="card-options">
-                  <button 
-                    className="card-option-btn edit"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setEditMode(kpiWidget.id);
-                    }}
-                  >
-                    <EditIcon />
-                  </button>
-                  <button 
-                    className="card-option-btn remove"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleRemoveWidget(kpiWidget.id);
-                    }}
-                  >
-                    <DeleteIcon />
-                  </button>
-                </div>
+            {/* Back of card */}
+            <div className="kpi-card back">
+              <div className="card-options">
+                <button 
+                  className="card-option-btn edit"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setEditMode(kpiWidget.id);
+                  }}
+                >
+                  <EditIcon />
+                </button>
+                <button 
+                  className="card-option-btn remove"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleRemoveWidget(kpiWidget.id);
+                  }}
+                >
+                  <DeleteIcon />
+                </button>
               </div>
             </div>
           </div>
@@ -997,6 +1102,48 @@ const DashboardPage: React.FC = () => {
     }
   }, [editMode, widgets]);
 
+  // Add this function to handle layout changes
+  const onLayoutChange = (layout: any[], allLayouts: any) => {
+    setLayouts(allLayouts);
+    
+    // Update each widget's size after drag
+    layout.forEach(item => {
+      const widgetElement = document.querySelector(`[data-grid-id="${item.i}"]`);
+      if (widgetElement) {
+        const cardContainer = widgetElement.querySelector('.kpi-card-container');
+        const cardFront = widgetElement.querySelector('.kpi-card.front');
+        
+        if (cardContainer && cardFront) {
+          // Get the current size class
+          const sizeClass = cardFront.className.match(/small|medium|large/)?.[0] || 'medium';
+          
+          // Update grid item size based on the size class
+          let newW = 4, newH = 3; // default medium size
+          switch(sizeClass) {
+            case 'small':
+              newW = 3;
+              newH = 2;
+              break;
+            case 'medium':
+              newW = 4;
+              newH = 3;
+              break;
+            case 'large':
+              newW = 5;
+              newH = 4;
+              break;
+          }
+          
+          // Update the layout item
+          item.w = newW;
+          item.h = newH;
+          item.minW = newW;
+          item.minH = newH;
+        }
+      }
+    });
+  };
+
   return (
     <div className="dashboard-container">
       <ToastContainer />
@@ -1020,7 +1167,7 @@ const DashboardPage: React.FC = () => {
             breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
             cols={{ lg: 12, md: 9, sm: 6, xs: 4, xxs: 2 }}
             rowHeight={60}
-            onLayoutChange={(layout, layouts) => setLayouts(layouts)}
+            onLayoutChange={onLayoutChange}
             isDraggable={true}
             isResizable={false}
             margin={[16, 16]}

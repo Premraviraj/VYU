@@ -743,11 +743,15 @@
   cursor: move;
   pointer-events: all !important;
   transition: all 0.3s ease;
+  --hover-color: #4169E1;
+  --card-color: #4169E1;
 }
 
 .kpi-card.front:hover,
 .widget-item-wrapper:hover .kpi-card.front {
-  background: #4169E1;
+  background: var(--hover-color);
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
 }
 
 .kpi-card.front:hover .kpi-card-title,
@@ -758,7 +762,7 @@
 .widget-item-wrapper:hover .kpi-value,
 .widget-item-wrapper:hover .kpi-name,
 .widget-item-wrapper:hover .kpi-source {
-  color: white !important;
+  color: white;
 }
 
 .kpi-card.front:hover,
@@ -771,7 +775,7 @@
 }
 
 .kpi-card.back {
-  background: #4169E1;
+  background: var(--card-color);
   transform: rotateY(180deg);
   display: flex;
   align-items: center;
@@ -1173,7 +1177,7 @@
 
 /* Adjust option animations */
 .edit-option {
-  opacity: 0;
+  /* opacity: 0; */
   transform: translateY(20px);
   transition: all 0.3s ease;
 }
@@ -1356,4 +1360,245 @@
 .save-btn {
   cursor: pointer;
   pointer-events: auto !important;
+}
+
+/* Card Size Variations - Update these styles */
+/* Small size */
+.widget-item .kpi-card-container.small {
+  transform: scale(0.85);
+}
+
+.widget-item.small {
+  width: 250px !important;
+  height: 150px !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.widget-item.small .kpi-card-container {
+  width: 250px !important;
+  height: 150px !important;
+}
+
+.widget-item.small .kpi-card.front {
+  width: 250px !important;
+  height: 150px !important;
+}
+
+/* Medium size */
+.widget-item .kpi-card-container.medium {
+  transform: scale(1);
+}
+
+.widget-item.medium {
+  width: 350px !important;
+  height: 200px !important;
+}
+
+.kpi-card.front.medium {
+  width: 350px;
+  height: 200px;
+}
+
+.kpi-card.front.medium .kpi-value {
+  font-size: 2rem;
+}
+
+.kpi-card.front.medium .kpi-name {
+  font-size: 0.9rem;
+}
+
+.kpi-card.front.medium .kpi-source {
+  font-size: 0.8rem;
+}
+
+/* Large size */
+.widget-item .kpi-card-container.large {
+  transform: scale(1.15);
+}
+
+.widget-item.large {
+  width: 450px !important;
+  height: 250px !important;
+}
+
+.kpi-card.front.large {
+  width: 450px;
+  height: 250px;
+}
+
+.kpi-card.front.large .kpi-value {
+  font-size: 2.5rem;
+}
+
+.kpi-card.front.large .kpi-name {
+  font-size: 1rem;
+}
+
+.kpi-card.front.large .kpi-source {
+  font-size: 0.9rem;
+}
+
+/* Ensure smooth transitions */
+.widget-item,
+.kpi-card-container,
+.kpi-card.front,
+.kpi-card.front * {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Update Small size card content alignment */
+.kpi-card.front.small {
+  display: flex;
+  flex-direction: column;
+  padding: 12px;
+}
+
+.kpi-card.front.small .kpi-card-title {
+  text-align: left;
+  margin-bottom: 8px;
+  font-size: 1rem;
+  align-self: flex-start;
+  width: 100%;
+  padding-left: 8px;
+}
+
+.kpi-card.front.small .kpi-card-content {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  flex: 1;
+  width: 100%;
+  padding: 0;
+}
+
+.kpi-card.front.small .kpi-value {
+  font-size: 1.5rem;
+  margin-bottom: 4px;
+  text-align: center;
+}
+
+.kpi-card.front.small .kpi-name {
+  font-size: 0.8rem;
+  margin-bottom: 4px;
+  text-align: center;
+}
+
+.kpi-card.front.small .kpi-source {
+  font-size: 0.7rem;
+  text-align: center;
+  margin-top: 4px;
+}
+
+/* Add flex container for better centering */
+.kpi-card.front.small {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 12px;
+}
+
+/* Enhanced Background Icon Styles - Add at the end */
+.background-icon {
+  position: absolute;
+  right: -10%;
+  bottom: -10%;
+  width: 80%;
+  height: 80%;
+  opacity: 0.07;
+  transform: rotate(-15deg);
+  pointer-events: none;
+  z-index: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.background-icon svg {
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 0 8px rgba(0, 0, 0, 0.1));
+}
+
+/* Size-specific background icon adjustments */
+.kpi-card.front.small .background-icon {
+  width: 90%;
+  height: 90%;
+  right: -15%;
+  bottom: -15%;
+}
+
+.kpi-card.front.medium .background-icon {
+  width: 100%;
+  height: 100%;
+  right: -10%;
+  bottom: -10%;
+}
+
+.kpi-card.front.large .background-icon {
+  width: 120%;
+  height: 120%;
+  right: -5%;
+  bottom: -5%;
+}
+
+/* Hover animations for the background icon */
+.kpi-card.front:hover .background-icon {
+  opacity: 0.12;
+  transform: rotate(-10deg) scale(1.1);
+  filter: drop-shadow(0 0 12px rgba(255, 255, 255, 0.2));
+}
+
+/* Add a subtle floating animation */
+@keyframes floatIcon {
+  0% { transform: rotate(-15deg) translateY(0); }
+  50% { transform: rotate(-12deg) translateY(-5px); }
+  100% { transform: rotate(-15deg) translateY(0); }
+}
+
+.background-icon {
+  animation: floatIcon 6s ease-in-out infinite;
+}
+
+/* Make sure content stays above the icon */
+.kpi-card-title,
+.kpi-card-content {
+  position: relative;
+  z-index: 1;
+}
+
+/* Fix small size container fit */
+.widget-item.small {
+  width: 250px !important;
+  height: 150px !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.widget-item.small .kpi-card-container {
+  width: 250px !important;
+  height: 150px !important;
+}
+
+.widget-item.small .kpi-card.front {
+  width: 250px !important;
+  height: 150px !important;
+}
+
+/* Ensure grid item matches card size */
+.react-grid-item.small {
+  width: 250px !important;
+  height: 150px !important;
+}
+
+/* Remove any unwanted scaling */
+.widget-item.small,
+.widget-item.small .kpi-card-container,
+.widget-item.small .kpi-card.front {
+  transform: none !important;
 }
