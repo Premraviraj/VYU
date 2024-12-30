@@ -9,6 +9,7 @@ import { API_URL } from '../../../utils/config';
 import StackLoader from '../../common/StackLoader';
 import { VehicleStats as ImportedVehicleStats, RuleCounts as ImportedRuleCounts } from '../../../data/vehicleData';
 import StorageRoundedIcon from '@mui/icons-material/StorageRounded';
+import { socket } from '../../../socket';
 
 interface FilteredStats {
   VideoSource: string;
@@ -64,6 +65,16 @@ interface VideoSourceResponse {
   total: number;
 }
 
+// Add this interface for KPI updates
+interface KPIUpdate {
+  kpi_name: string;
+  updates: Array<{
+    videoSource: string;
+    rule: string;
+    count: number;
+  }>;
+}
+
 const WidgetsPage: React.FC = (): React.ReactElement => {
   const [isGraphModalOpen, setIsGraphModalOpen] = useState(false);
   const [isKPIModalOpen, setIsKPIModalOpen] = useState(false);
@@ -78,6 +89,9 @@ const WidgetsPage: React.FC = (): React.ReactElement => {
 
   // Create a ref for the widgets container
   const containerRef = useRef<HTMLDivElement | null>(null);
+
+  // Add new state for real-time values
+  const [realTimeValues, setRealTimeValues] = useState<Record<string, number>>({});
 
   // Add this useEffect to create the widgets container
   useEffect(() => {
@@ -375,89 +389,103 @@ const WidgetsPage: React.FC = (): React.ReactElement => {
     }
   };
 
-  // Update the updateKPIValues function
+  // Add this function before the useEffect
   const updateKPIValues = useCallback(async () => {
-    console.log('🔄 Starting KPI values update...'); // Debug log
-    
-    // Use containerRef to find KPI widgets
-    const kpiWidgets = containerRef.current?.querySelectorAll('.kpi-widget');
-    console.log(`📊 Found ${kpiWidgets?.length || 0} KPI widgets`); 
+    if (!expandedCard || !filteredData) return;
 
-    if (!kpiWidgets?.length) return;
-
-    for (const widget of Array.from(kpiWidgets)) {
-      const fields = widget.querySelectorAll('.kpi-field');
-      console.log(`Found ${fields.length} fields in widget ${widget.id}`); // Debug log
-
-      for (const field of Array.from(fields)) {
-        const collection = field.getAttribute('data-collection');
-        const videoSource = field.getAttribute('data-video-source');
-        const fieldType = field.getAttribute('data-type');
-        
-        console.log('Field attributes:', { collection, videoSource, fieldType }); // Debug log
-
-        if (!collection || !videoSource || !fieldType) {
-          console.warn('⚠️ Missing required attributes:', { collection, videoSource, fieldType });
-          continue;
+    try {
+      const response = await fetch(
+        `${API_URL}/api/v1/Collection/filtered/count?collection=${encodeURIComponent(expandedCard.collectionName)}&VideoSource=${encodeURIComponent(expandedCard.videoSource)}`,
+        {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          },
+          credentials: 'include'
         }
+      );
 
-        try {
-          const apiEndpoint = `${API_URL}/api/v1/Collection/filtered/count?collection=${collection}&VideoSource=${videoSource}&Rule=${fieldType}`;
-          console.log('🌐 Fetching from:', apiEndpoint); // Debug log
+      if (!response.ok) {
+        throw new Error('Failed to fetch updated values');
+      }
 
-          const response = await fetch(apiEndpoint, {
-            credentials: 'include'
-          });
-
-          if (response.ok) {
-            const data = await response.json();
-            console.log('📥 Received data:', data); // Debug log
-
-            if (data.fieldCounts && data.fieldCounts[fieldType] !== undefined) {
-              const valueElement = field.querySelector('.field-value') as HTMLElement;
-              if (valueElement) {
-                const oldValue = parseInt(valueElement.textContent || '0');
-                const newValue = data.fieldCounts[fieldType];
-                
-                console.log('Value update:', {
-                  field: fieldType,
-                  oldValue,
-                  newValue
-                }); // Debug log
-
-                if (oldValue !== newValue) {
-                  valueElement.classList.add('value-updated');
-                  valueElement.textContent = newValue.toString();
-                }
-              }
+      const data = await response.json();
+      
+      if (data.fieldCounts) {
+        setFilteredData(prev => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            rawResponse: {
+              ...prev.rawResponse,
+              ruleCounts: data.fieldCounts
             }
-          }
-        } catch (error) {
-          console.error('❌ Error updating field:', error);
+          };
+        });
+      }
+    } catch (error) {
+      console.error('Error updating KPI values:', error);
+    }
+  }, [expandedCard, filteredData]);
+
+  // Update the socket effect to handle both types of updates
+  useEffect(() => {
+    // Start polling when component mounts
+    socket.emit('startPolling');
+
+    // Function to handle updates
+    const handleUpdate = (data: any) => {
+      console.log('Received update:', data);
+      
+      if (expandedCard?.collectionName && filteredData) {
+        // Check if the update is for the current collection and source
+        if (data.collection === expandedCard.collectionName && 
+            (!data.videoSource || data.videoSource === expandedCard.videoSource)) {
+          setFilteredData(prev => {
+            if (!prev) return prev;
+
+            const newRuleCounts = {
+              ...prev.rawResponse?.ruleCounts,
+              ...(data.fieldCounts || {})
+            };
+
+            return {
+              ...prev,
+              rawResponse: {
+                ...prev.rawResponse,
+                ruleCounts: newRuleCounts
+              }
+            };
+          });
         }
       }
-    }
-  }, []);
+    };
 
-  // Set up the interval with proper cleanup
-  useEffect(() => {
-    console.log('🚀 Setting up periodic updates...'); // Debug log
-    
-    // Initial update
-    updateKPIValues();
+    // Listen for both types of updates
+    socket.on('kpiUpdate', handleUpdate);
+    socket.on('dataUpdated', handleUpdate);
 
-    // Set up interval for periodic updates
-    const interval = setInterval(() => {
-      console.log('⏰ Running periodic update...'); // Debug log
-      updateKPIValues();
-    }, 5000); // Update every 5 seconds
+    // Set up polling interval
+    const interval = setInterval(updateKPIValues, 5000);
 
-    // Cleanup on unmount
+    // Cleanup
     return () => {
-      console.log('🧹 Cleaning up interval...'); // Debug log
+      socket.off('kpiUpdate', handleUpdate);
+      socket.off('dataUpdated', handleUpdate);
       clearInterval(interval);
     };
-  }, [updateKPIValues]);
+  }, [expandedCard, filteredData, updateKPIValues]);
+
+  // Keep only one copy of the styles effect
+  useEffect(() => {
+    const styleSheet = document.createElement('style');
+    styleSheet.textContent = styles;
+    document.head.appendChild(styleSheet);
+    return () => {
+      document.head.removeChild(styleSheet);
+    };
+  }, []);
 
   // Add this to ensure widgets are properly mounted
   useEffect(() => {
@@ -466,23 +494,28 @@ const WidgetsPage: React.FC = (): React.ReactElement => {
 
   // Add this CSS class for the update animation
   const styles = `
-    @keyframes valueUpdate {
-      0% {
-        transform: scale(1);
-        color: inherit;
-      }
-      50% {
-        transform: scale(1.1);
-        color: #4f46e5;
-      }
-      100% {
-        transform: scale(1);
-        color: inherit;
-      }
+    .rule-count-badge {
+      transition: all 0.3s ease;
+    }
+
+    .rule-count-badge.updating {
+      animation: pulse 0.5s ease-in-out;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.1); color: #4f46e5; }
+      100% { transform: scale(1); }
     }
 
     .value-updated {
       animation: valueUpdate 0.5s ease-out;
+    }
+
+    @keyframes valueUpdate {
+      0% { transform: scale(1); color: inherit; }
+      50% { transform: scale(1.1); color: #4f46e5; }
+      100% { transform: scale(1); color: inherit; }
     }
   `;
 
@@ -506,6 +539,30 @@ const WidgetsPage: React.FC = (): React.ReactElement => {
       document.querySelector('.widgets-page')?.appendChild(container);
     }
   }, []);
+
+  // Update the renderRuleCard function
+  const renderRuleCard = (rule: string, count: number) => (
+    <div key={`${rule}`} className="rule-card" onClick={(e) => e.stopPropagation()}>
+      <div className="rule-card-header">
+        <h5>{rule}</h5>
+        <span className="rule-count-badge">
+          {count}
+        </span>
+      </div>
+      <div className="rule-card-body">
+        <div className="rule-info">
+          <span className="source-label">Source:</span>
+          <span className="source-value">{expandedCard?.videoSource}</span>
+        </div>
+        <div className="rule-info">
+          <span className="update-label">Last Updated:</span>
+          <span className="update-value">
+            {new Date().toLocaleTimeString()}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
 
   return (
     <div className="widgets-page">
@@ -558,34 +615,11 @@ const WidgetsPage: React.FC = (): React.ReactElement => {
 
                       <div className="rules-section">
                         <h4>Rule Counts</h4>
-                        {filteredData.rawResponse?.ruleCounts ? (
+                        {filteredData.rawResponse?.ruleCounts && (
                           <div className="rules-grid">
-                            {Object.entries(filteredData.rawResponse.ruleCounts).map(([rule, count], index) => (
-                              <div key={`${rule}-${index}`} className="rule-card" onClick={(e) => e.stopPropagation()}>
-                                <div className="rule-card-header">
-                                  <h5>{rule}</h5>
-                                  <span className="rule-count-badge">
-                                    {typeof count === 'number' ? count : 0}
-                                  </span>
-                                </div>
-                                <div className="rule-card-body">
-                                  <div className="rule-info">
-                                    <span className="source-label">Source:</span>
-                                    <span className="source-value">{expandedCard.videoSource}</span>
-                                  </div>
-                                  <div className="rule-info">
-                                    <span className="update-label">Last Updated:</span>
-                                    <span className="update-value">
-                                      {new Date().toLocaleTimeString()}
-                                    </span>
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <div className="no-rules-message">
-                            No rules found for this source
+                            {Object.entries(filteredData.rawResponse.ruleCounts).map(([rule, count]) => 
+                              renderRuleCard(rule, typeof count === 'number' ? count : 0)
+                            )}
                           </div>
                         )}
                       </div>

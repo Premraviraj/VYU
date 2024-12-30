@@ -282,26 +282,17 @@
 .navIcon {
   width: 24px;
   height: 24px;
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  position: relative;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .icon {
-  stroke: #94A3B8;
-  fill: none;
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  stroke: var(--icon-color);
+  transition: var(--theme-transition);
 }
 
 .activeIcon {
-  stroke: #6B4DE6;
-  fill: none;
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  filter: drop-shadow(0 0 8px rgba(107, 77, 230, 0.3));
+  stroke: var(--icon-active);
+  filter: drop-shadow(0 0 8px var(--primary-color));
 }
 
 .iconGlow {
@@ -458,4 +449,390 @@
 
 .watching .logoIcon circle[fill="#6366F1"] {
   filter: drop-shadow(0 0 8px rgba(99, 102, 241, 0.8));
+}
+
+/* Grid item animations */
+.gridItem {
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sidebarItem:hover .gridItem {
+  transform: scale(1.1);
+}
+
+/* Pulse animation */
+.pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(1.5);
+  }
+}
+
+/* Widget block animations */
+.widgetBlock {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sidebarItem:hover .widgetBlock {
+  transform: translateY(-2px);
+  filter: drop-shadow(0 2px 4px rgba(99, 102, 241, 0.2));
+}
+
+/* Connection line animations */
+.connectionLine {
+  stroke-dasharray: 10;
+  animation: dash 20s linear infinite;
+}
+
+@keyframes dash {
+  to {
+    stroke-dashoffset: 1000;
+  }
+}
+
+/* Gear animations */
+.gearOuter {
+  transform-origin: center;
+  animation: spin 10s linear infinite;
+}
+
+.gearInner {
+  transform-origin: center;
+  animation: spin 10s linear infinite reverse;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Hover effects */
+.sidebarItem:hover .navIcon {
+  transform: scale(1.1);
+}
+
+.sidebarItem:hover .icon {
+  stroke: var(--icon-hover);
+}
+
+/* Active state animations */
+.active .navIcon {
+  animation: bounce 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+/* Icon background glow */
+.iconBackground {
+  fill: transparent;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sidebarItem:hover .iconBackground {
+  fill: rgba(99, 102, 241, 0.1);
+}
+
+/* Smooth transitions */
+.sidebarItem {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sidebarItem:hover {
+  background: rgba(99, 102, 241, 0.1);
+  transform: translateY(-2px);
+}
+
+/* Widget icon specific styles */
+.widgetBlocks {
+  transform-origin: center;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.widgetBlock {
+  fill: currentColor;
+  opacity: 0.8;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sidebarItem:hover .widgetBlock {
+  opacity: 1;
+}
+
+/* Individual widget block animations */
+.widgetBlock1 {
+  animation: float 3s ease-in-out infinite;
+}
+
+.widgetBlock2 {
+  animation: float 3s ease-in-out infinite 0.5s;
+}
+
+.widgetBlock3 {
+  animation: float 3s ease-in-out infinite 1s;
+}
+
+.widgetBlock4 {
+  animation: float 3s ease-in-out infinite 1.5s;
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translate(0, 0);
+  }
+  50% {
+    transform: translate(0, -1px);
+  }
+}
+
+/* Connection lines animation */
+.connectionLines {
+  opacity: 0.4;
+  transition: opacity 0.3s ease;
+}
+
+.connectionLine {
+  stroke: currentColor;
+  stroke-dasharray: 4;
+  animation: dash 15s linear infinite;
+}
+
+.sidebarItem:hover .connectionLines {
+  opacity: 0.8;
+}
+
+/* Dots animation */
+.dot {
+  fill: currentColor;
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.dot:nth-child(1) { animation-delay: 0s; }
+.dot:nth-child(2) { animation-delay: 0.5s; }
+.dot:nth-child(3) { animation-delay: 1s; }
+.dot:nth-child(4) { animation-delay: 1.5s; }
+
+/* Center pulse effect */
+.centerPulse {
+  fill: currentColor;
+  animation: centerPulse 2s ease-in-out infinite;
+}
+
+@keyframes centerPulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.5;
+  }
+  50% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+
+/* Hover state enhancements */
+.sidebarItem:hover .widgetBlocks {
+  transform: scale(1.05);
+}
+
+.sidebarItem:hover .centerPulse {
+  animation-duration: 1.5s;
+}
+
+/* Active state enhancements */
+.active .widgetBlocks {
+  transform: scale(1.1);
+}
+
+.active .connectionLines {
+  opacity: 1;
+}
+
+.active .centerPulse {
+  animation-duration: 1s;
+}
+
+/* Dashboard icon specific styles */
+.dashboardGrid {
+  transform-origin: center;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.dashPanel {
+  fill: currentColor;
+  opacity: 0.8;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Panel-specific animations */
+.statsPanel {
+  animation: fadeInScale 0.5s ease-out;
+}
+
+.chartPanel {
+  animation: slideRight 0.5s ease-out;
+}
+
+.bottomPanel1 {
+  animation: slideUp 0.5s ease-out 0.1s both;
+}
+
+.bottomPanel2 {
+  animation: slideUp 0.5s ease-out 0.2s both;
+}
+
+.bottomPanel3 {
+  animation: slideUp 0.5s ease-out 0.3s both;
+}
+
+/* Chart lines animation */
+.chartLine {
+  stroke: currentColor;
+  stroke-width: 0.5;
+  stroke-dasharray: 10;
+  animation: drawLine 3s linear infinite;
+  opacity: 0.6;
+}
+
+.chartLine:nth-child(2) {
+  animation-delay: 1.5s;
+}
+
+/* Stats dots animation */
+.statDot1, .statDot2, .statDot3 {
+  fill: currentColor;
+  animation: pulse 2s infinite;
+}
+
+.statDot1 { animation-delay: 0s; }
+.statDot2 { animation-delay: 0.6s; }
+.statDot3 { animation-delay: 1.2s; }
+
+/* Bottom bars animation */
+.bar1, .bar2, .bar3 {
+  fill: currentColor;
+  animation: barGrow 2s ease-in-out infinite;
+}
+
+.bar1 { animation-delay: 0s; }
+.bar2 { animation-delay: 0.3s; }
+.bar3 { animation-delay: 0.6s; }
+
+/* Activity indicator */
+.activityIndicator {
+  fill: currentColor;
+  filter: blur(1px);
+  animation: glow 2s ease-in-out infinite;
+}
+
+/* Animation keyframes */
+@keyframes fadeInScale {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes slideRight {
+  from {
+    transform: translateX(-10px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(10px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes drawLine {
+  0% {
+    stroke-dashoffset: 20;
+  }
+  50% {
+    stroke-dashoffset: 0;
+  }
+  100% {
+    stroke-dashoffset: -20;
+  }
+}
+
+@keyframes barGrow {
+  0%, 100% {
+    height: 2px;
+    y: 18px;
+  }
+  50% {
+    height: 4px;
+    y: 16px;
+  }
+}
+
+@keyframes glow {
+  0%, 100% {
+    opacity: 0.5;
+    filter: blur(1px) brightness(1);
+  }
+  50% {
+    opacity: 1;
+    filter: blur(2px) brightness(1.5);
+  }
+}
+
+/* Hover effects */
+.sidebarItem:hover .dashboardGrid {
+  transform: scale(1.05);
+}
+
+.sidebarItem:hover .dashPanel {
+  opacity: 1;
+}
+
+.sidebarItem:hover .chartLine {
+  opacity: 0.8;
+}
+
+/* Active state */
+.active .dashboardGrid {
+  transform: scale(1.1);
+}
+
+.active .activityIndicator {
+  animation-duration: 1.5s;
+}
+
+.logoIcon path {
+  fill: var(--primary-color);
+  stroke: var(--primary-color);
 } 

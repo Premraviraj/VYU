@@ -13,6 +13,7 @@ import UserSettings from './components/pages/settings/UserSettings';
 import { WidgetProvider } from './context/WidgetContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { DataProvider } from './context/DataContext';
+import './styles/global.css';
 
 const ProtectedRoute: React.FC<{ 
   children: React.ReactNode;

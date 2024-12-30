@@ -1,16 +1,36 @@
 :root {
-  --primary-color: #1a237e;
-  --secondary-color: #0d47a1;
-  --background-color: #f5f6fa;
-  --card-background: #ffffff;
-  --text-primary: #333333;
-  --text-secondary: #666666;
-  --border-color: #e0e0e0;
-  --sidebar-bg: #ffffff;
-  --sidebar-hover: #f5f6fa;
-  --theme-transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
-  --icon-color: #4f46e5;
-  --icon-gradient: linear-gradient(135deg, #4f46e5, #7c3aed);
+  /* Theme Colors */
+  --primary-color: var(--theme-primary, #4f46e5);
+  --secondary-color: var(--theme-secondary, #7c3aed);
+  --background-color: var(--theme-background, #f8fafc);
+  --text-color: var(--theme-text, #1e293b);
+  --gradient: var(--theme-gradient, linear-gradient(135deg, #4f46e5, #7c3aed));
+  
+  /* Component Colors */
+  --card-bg: var(--theme-card-bg, #ffffff);
+  --card-border: var(--theme-card-border, rgba(226, 232, 240, 0.8));
+  --card-shadow: var(--theme-card-shadow, rgba(0, 0, 0, 0.1));
+  
+  /* Text Colors */
+  --text-primary: var(--theme-text-primary, #1e293b);
+  --text-secondary: var(--theme-text-secondary, #64748b);
+  --text-muted: var(--theme-text-muted, #94a3b8);
+  
+  /* Icon Colors */
+  --icon-color: var(--theme-icon, #4f46e5);
+  --icon-hover: var(--theme-icon-hover, #7c3aed);
+  --icon-active: var(--theme-icon-active, #6366f1);
+  
+  /* Interactive Colors */
+  --hover-bg: var(--theme-hover-bg, rgba(99, 102, 241, 0.1));
+  --active-bg: var(--theme-active-bg, rgba(99, 102, 241, 0.2));
+  --focus-ring: var(--theme-focus-ring, rgba(99, 102, 241, 0.3));
+  
+  /* Status Colors */
+  --success: var(--theme-success, #10b981);
+  --warning: var(--theme-warning, #f59e0b);
+  --error: var(--theme-error, #ef4444);
+  --info: var(--theme-info, #3b82f6);
 }
 
 /* Theme-specific variables */
@@ -759,4 +779,20 @@ input:checked + .slider {
   0% { transform: scale(1); opacity: 1; }
   50% { transform: scale(1.02); opacity: 0.5; }
   100% { transform: scale(1); opacity: 1; }
+}
+
+.settings-main-icon {
+  color: var(--primary-color);
+  filter: drop-shadow(0 0 10px var(--primary-color));
+}
+
+.sidebar-item.active {
+  color: var(--primary-color);
+  background: color-mix(in srgb, var(--primary-color) 10%, transparent);
+}
+
+.theme-card.selected {
+  box-shadow: 
+    0 0 0 3px var(--primary-color),
+    0 4px 12px color-mix(in srgb, var(--primary-color) 20%, transparent);
 }

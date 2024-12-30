@@ -2,23 +2,33 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { useNavigate } from 'react-router-dom';
 
 interface AuthContextType {
-  isAuthenticated: boolean;
-  userRole: 'admin' | 'user' | null;
+  userRole: string;
   login: (role: 'admin' | 'user', redirectPath?: string) => void;
   logout: () => void;
+  updateUserProfile: (profile: UserProfile) => Promise<void>;
+  isAuthenticated: boolean;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+interface UserProfile {
+  username: string;
+  email: string;
+  avatar: string;
+  notifications: boolean;
+  role?: string;
+}
+
+export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  // Initialize state from localStorage
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
     return localStorage.getItem('isAuthenticated') === 'true';
   });
   
-  const [userRole, setUserRole] = useState<'admin' | 'user' | null>(() => {
-    return (localStorage.getItem('userRole') as 'admin' | 'user' | null) || null;
+  const [userRole, setUserRole] = useState<string>(() => {
+    return localStorage.getItem('userRole') || '';
   });
-  
+
   const navigate = useNavigate();
 
   // Persist auth state to localStorage when it changes
@@ -26,8 +36,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     localStorage.setItem('isAuthenticated', isAuthenticated.toString());
     if (userRole) {
       localStorage.setItem('userRole', userRole);
-    } else {
-      localStorage.removeItem('userRole');
     }
   }, [isAuthenticated, userRole]);
 
@@ -43,43 +51,45 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (isAuthenticated && userRole) {
       // Only redirect if on login or root path
       if (path === '/login' || path === '/') {
-        const defaultPath = userRole === 'admin' ? '/localconfig/dashboard' : '/localhost/dashboard';
-        navigate(defaultPath);
+        const defaultPath = userRole === 'admin' ? '/localconfig/dashboard' : '/user/dashboard';
+        navigate(defaultPath, { replace: true });
         return;
       }
 
       // Check for incorrect role access
       const isAdminPath = path.includes('/localconfig');
-      const isUserPath = path.includes('/localhost');
+      const isUserPath = path.includes('/user');
 
       if (userRole === 'admin' && isUserPath) {
-        navigate('/localconfig/dashboard');
+        navigate('/localconfig/dashboard', { replace: true });
       } else if (userRole === 'user' && isAdminPath) {
-        navigate('/localhost/dashboard');
+        navigate('/user/dashboard', { replace: true });
       }
-      // If path is correct for role, don't navigate
     }
   }, [isAuthenticated, userRole, navigate]);
 
   const login = (role: 'admin' | 'user', redirectPath?: string) => {
     setIsAuthenticated(true);
     setUserRole(role);
-    const defaultPath = role === 'admin' ? '/localconfig/dashboard' : '/localhost/dashboard';
-    navigate(redirectPath || defaultPath);
+    localStorage.setItem('isAuthenticated', 'true');
+    localStorage.setItem('userRole', role);
+    
+    const defaultPath = role === 'admin' ? '/localconfig/dashboard' : '/user/dashboard';
+    navigate(redirectPath || defaultPath, { replace: true });
   };
 
   const logout = () => {
-    setIsAuthenticated(false);
-    setUserRole(null);
-    
-    // Clear auth-related items but keep preferences
+    // Keep preferences before clearing localStorage
     const preferencesToKeep = {
       theme: localStorage.getItem('theme'),
-      layout: localStorage.getItem('layout'),
       dashboardWidgets: localStorage.getItem('dashboardWidgets')
     };
     
-    localStorage.clear();
+    // Clear auth state
+    setIsAuthenticated(false);
+    setUserRole('');
+    localStorage.removeItem('isAuthenticated');
+    localStorage.removeItem('userRole');
     
     // Restore preferences
     Object.entries(preferencesToKeep).forEach(([key, value]) => {
@@ -89,8 +99,27 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     navigate('/login', { replace: true });
   };
 
+  const updateUserProfile = async (profile: UserProfile) => {
+    try {
+      // Here you would typically make an API call to update the user profile
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      setUserRole(profile.role || userRole);
+      return Promise.resolve();
+    } catch (error) {
+      return Promise.reject(error);
+    }
+  };
+
+  const value = {
+    userRole,
+    login,
+    logout,
+    updateUserProfile,
+    isAuthenticated
+  };
+
   return (
-    <AuthContext.Provider value={{ isAuthenticated, userRole, login, logout }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );

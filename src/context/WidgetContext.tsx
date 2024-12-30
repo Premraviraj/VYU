@@ -1,17 +1,27 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Widget } from '../types/Widget';
 import type { DashboardKPICard } from '../types/kpiTypes';
 
-interface WidgetContextType {
+export interface WidgetContextType {
   widgets: (Widget | DashboardKPICard)[];
   addWidget: (widget: Widget | DashboardKPICard) => void;
   removeWidget: (id: string) => void;
+  setWidgets: React.Dispatch<React.SetStateAction<(Widget | DashboardKPICard)[]>>;
 }
 
 const WidgetContext = createContext<WidgetContextType | undefined>(undefined);
 
 export const WidgetProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [widgets, setWidgets] = useState<(Widget | DashboardKPICard)[]>([]);
+  // Initialize widgets from localStorage or empty array
+  const [widgets, setWidgets] = useState<(Widget | DashboardKPICard)[]>(() => {
+    const savedWidgets = localStorage.getItem('dashboardWidgets');
+    return savedWidgets ? JSON.parse(savedWidgets) : [];
+  });
+
+  // Save widgets to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem('dashboardWidgets', JSON.stringify(widgets));
+  }, [widgets]);
 
   const addWidget = (widget: Widget | DashboardKPICard) => {
     setWidgets(prev => [...prev, widget]);
@@ -22,7 +32,7 @@ export const WidgetProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   };
 
   return (
-    <WidgetContext.Provider value={{ widgets, addWidget, removeWidget }}>
+    <WidgetContext.Provider value={{ widgets, setWidgets, addWidget, removeWidget }}>
       {children}
     </WidgetContext.Provider>
   );

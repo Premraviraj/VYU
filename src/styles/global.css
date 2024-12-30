@@ -1,0 +1,63 @@
+/* Apply theme colors to common elements */
+body {
+  background-color: var(--background-color);
+  color: var(--text-primary);
+}
+
+/* Headings */
+h1, h2, h3, h4, h5, h6 {
+  color: var(--text-primary);
+}
+
+/* Cards and containers */
+.card, .container, .widget {
+  background-color: var(--card-bg);
+  border: 1px solid var(--card-border);
+  box-shadow: 0 2px 4px var(--card-shadow);
+}
+
+/* Buttons */
+.button, button {
+  background-color: var(--primary-color);
+  color: white;
+}
+
+.button:hover, button:hover {
+  background-color: var(--secondary-color);
+}
+
+/* Icons */
+.icon {
+  color: var(--icon-color);
+}
+
+.icon:hover {
+  color: var(--icon-hover);
+}
+
+.active .icon {
+  color: var(--icon-active);
+}
+
+/* Form elements */
+input, select, textarea {
+  border-color: var(--card-border);
+  background-color: var(--card-bg);
+  color: var(--text-primary);
+}
+
+input:focus, select:focus, textarea:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+/* Status colors */
+.success { color: var(--success); }
+.warning { color: var(--warning); }
+.error { color: var(--error); }
+.info { color: var(--info); }
+
+/* Transitions */
+* {
+  transition: background-color 0.3s, color 0.3s, border-color 0.3s, box-shadow 0.3s;
+} 
