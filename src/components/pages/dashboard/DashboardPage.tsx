@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useWidgets } from '../../../context/WidgetContext';
-import { Widget, GraphType, isGraphWidget } from '../../../types/Widget';
+import { Widget as ImportedWidget, GraphType, isGraphWidget } from '../../../types/Widget';
 import { ColorState } from '../../../context/GraphContext';
 import './DashboardPage.css';
 import { toast, ToastContainer } from 'react-toastify';
@@ -31,11 +31,48 @@ import {
 } from '@mui/icons-material';
 import { API_URL } from '../../../utils/config';
 import { ReceivedKpiData } from '../../../types/kpiTypes';
-import type { DashboardKPICard } from '../../../types/kpiTypes';
+import type { DashboardKPICard as ImportedDashboardKPICard } from '../../../types/kpiTypes';
 import axios from 'axios';
 import ReactDOMServer from 'react-dom/server';
 import ReactDOM from 'react-dom';
+import { socket } from '../../../socket';
 // import { createStyles } from '@mui/styles';
+
+interface BaseWidget {
+  id: string;
+}
+
+interface DashboardKPICard extends BaseWidget {
+  kpi_name: string;
+  field_value: string;
+  field_name: string;
+  video_source: string;
+  style_size?: string;
+  style_color?: string;
+  style_icon?: string;
+  type?: 'kpi';
+  total_count?: number;
+  update_count?: number;
+  last_updated?: Date;
+}
+
+interface GraphWidget extends BaseWidget {
+  type: 'graph';
+  title: string;
+  content: any;
+  chartProps: {
+    type: GraphType;
+    data: any[];
+    colors: ColorState;
+  };
+}
+
+type LocalWidget = GraphWidget | DashboardKPICard;
+
+// Update type guard
+const isKPIWidget = (widget: LocalWidget): widget is DashboardKPICard => {
+  return 'kpi_name' in widget && !('type' in widget);
+};
 
 interface KPICardData {
   _id: string;
@@ -54,6 +91,7 @@ interface KPICardData {
   style_color: string;
   style_size: string;
   style_icon: string;
+  update_count?: string;
   config: {
     refresh_interval: number;
     layout: Object;
@@ -308,7 +346,7 @@ const useStyles = () => {
 // Update BlankWindow component to receive setIsBlankWindowOpen
 interface BlankWindowProps {
   setIsBlankWindowOpen: (isOpen: boolean) => void;
-  addWidget: (widget: Widget | DashboardKPICard) => void;
+  addWidget: (widget: LocalWidget | DashboardKPICard) => void;
 }
 
 const BlankWindow: React.FC<BlankWindowProps> = ({ setIsBlankWindowOpen, addWidget }) => {
@@ -334,12 +372,20 @@ const BlankWindow: React.FC<BlankWindowProps> = ({ setIsBlankWindowOpen, addWidg
       const data = await response.json();
       console.log('Raw API Response:', data);
 
-      // Process each card and ensure all fields are present
-      const processedCards = data.map((card: any) => {
-        console.log('Processing card:', card);
+      // Process each card
+      const processedCards = await Promise.all(data.map(async (card: any) => {
+        // Fetch the current count from the collection
+        const collectionResponse = await fetch(
+          `${API_URL}/api/v1/Collection/filtered/count?collection=${card.collection_name}&videoSource=${card.video_source}&rule=${card.rule_name}`,
+          {
+            credentials: 'include'
+          }
+        );
         
-        // Create a processed card with all required fields
-        const processedCard = {
+        const countData = await collectionResponse.json();
+        const currentCount = countData?.count || 0;
+
+        return {
           _id: card._id,
           kpi_id: card.kpi_id,
           kpi_name: card.kpi_name,
@@ -348,8 +394,9 @@ const BlankWindow: React.FC<BlankWindowProps> = ({ setIsBlankWindowOpen, addWidg
           created_at: card.created_at,
           updated_at: card.updated_at,
           field_id: card.field_id,
-          field_name: card.field_name || '',  // Provide default values
-          field_value: card.field_value || '0',
+          field_name: card.field_name || '',
+          field_value: currentCount.toString(),
+          update_count: currentCount.toString(),
           collection_name: card.collection_name || '',
           video_source: card.video_source || '',
           rule_name: card.rule_name || '',
@@ -361,12 +408,8 @@ const BlankWindow: React.FC<BlankWindowProps> = ({ setIsBlankWindowOpen, addWidg
             layout: card.config?.layout || {}
           }
         };
+      }));
 
-        console.log('Processed card:', processedCard);
-        return processedCard;
-      });
-
-      console.log('Final processed cards:', processedCards);
       setKpiCards(processedCards);
 
     } catch (error) {
@@ -378,20 +421,45 @@ const BlankWindow: React.FC<BlankWindowProps> = ({ setIsBlankWindowOpen, addWidg
     }
   };
 
-  const handleCardDoubleClick = (card: KPICardData) => {
-    // Create a dashboard widget from the KPI card
-    const dashboardCard: DashboardKPICard = {
-      ...card,
-      type: 'kpi',
-      id: `kpi-${Date.now()}`
+  const handleCardClick = (card: KPICardData) => {
+    const newWidget: DashboardKPICard = {
+      id: `kpi-${Date.now()}`,
+      kpi_name: card.kpi_name,
+      field_value: (card.update_count || '0').toString(),
+      field_name: card.field_name,
+      video_source: card.video_source,
+      style_size: card.style_size,
+      style_color: card.style_color,
+      style_icon: card.style_icon
     };
 
-    // Add the card to widgets
-    addWidget(dashboardCard);
-    
-    // Show success message and close modal
-    toast.success('Card added to dashboard');
+    addWidget(newWidget);
     setIsBlankWindowOpen(false);
+    toast.success('Widget added successfully!');
+  };
+
+  // Add this function to handle card deletion
+  const handleDeleteCard = async (kpiName: string) => {
+    try {
+      const response = await fetch(
+        `${API_URL}/api/v1/kpi?kpi_name=${kpiName}`,
+        {
+          method: 'DELETE',
+          credentials: 'include'
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to delete KPI card');
+      }
+
+      // Refresh the KPI cards list
+      fetchKPICardsWithFetch();
+      toast.success('KPI card deleted successfully');
+    } catch (error) {
+      console.error('Error deleting KPI card:', error);
+      toast.error('Failed to delete KPI card');
+    }
   };
 
   const renderKPICard = (card: KPICardData) => {
@@ -399,20 +467,31 @@ const BlankWindow: React.FC<BlankWindowProps> = ({ setIsBlankWindowOpen, addWidg
       <div 
         key={card._id} 
         className="kpi-card"
-        onDoubleClick={() => handleCardDoubleClick(card)}
+        onDoubleClick={() => handleCardClick(card)}
       >
-        <h3 className="kpi-card-title">
-          {card.kpi_name}
-        </h3>
+        <div className="hover-message">Double click to add</div>
+        <div className="kpi-card-header">
+          <h3 className="kpi-card-title">{card.kpi_name}</h3>
+          <button 
+            className="delete-card-btn"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (window.confirm('Are you sure you want to delete this KPI card?')) {
+                handleDeleteCard(card.kpi_name);
+              }
+            }}
+          >
+            <DeleteIcon />
+          </button>
+        </div>
         <div className="kpi-card-content">
-          <div className="kpi-value">
-            {card.field_value}
-          </div>
-          <div className="kpi-name">
-            {card.field_name}
-          </div>
-          <div className="kpi-source">
-            Source {card.video_source}
+          <div className="kpi-details">
+            <div className="kpi-source">
+              Source: {card.video_source}
+            </div>
+            <div className="kpi-collection">
+              Collection: {card.collection_name}
+            </div>
           </div>
         </div>
       </div>
@@ -672,20 +751,11 @@ const createNewKPICard = async (title: string, fields: any, designType: string) 
 
 // First, make sure your WidgetContext is properly typed
 interface WidgetContextType {
-  widgets: Widget[];
-  addWidget: (widget: Widget | DashboardKPICard) => void;
+  widgets: LocalWidget[];
+  addWidget: (widget: LocalWidget | DashboardKPICard) => void;
   removeWidget: (id: string) => void;
+  setWidgets: React.Dispatch<React.SetStateAction<LocalWidget[]>>;
 }
-
-// Update the type guard function
-const isKPIWidget = (widget: Widget | DashboardKPICard): widget is DashboardKPICard => {
-  return (
-    'kpi_name' in widget &&
-    'field_value' in widget &&
-    'field_name' in widget &&
-    'video_source' in widget
-  );
-};
 
 // Add this interface for the dialog
 interface EditDialogProps {
@@ -870,7 +940,7 @@ const EditDialog: React.FC<EditDialogProps> = ({ isOpen, onClose, widget, onSave
 
 const DashboardPage: React.FC = () => {
   const [isBlankWindowOpen, setIsBlankWindowOpen] = useState(false);
-  const { widgets, addWidget, removeWidget } = useWidgets() as WidgetContextType;
+  const { widgets, addWidget, removeWidget, setWidgets } = useWidgets() as WidgetContextType;
   const [isLoading, setIsLoading] = useState(true);
   const [layouts, setLayouts] = useState({});
   const [flippedCardId, setFlippedCardId] = useState<string | null>(null);
@@ -880,6 +950,7 @@ const DashboardPage: React.FC = () => {
     color?: string;
     icon?: string;
   }>({});
+  const [kpiData, setKpiData] = useState<Record<string, number>>({});
 
   // Add this effect to reset edit settings when edit mode changes
   useEffect(() => {
@@ -910,44 +981,40 @@ const DashboardPage: React.FC = () => {
     toast.success('Changes saved successfully!');
   };
 
-  const handleRemoveWidget = (id: string) => {
-    // Add deleting class to trigger animation
-    const widgetElement = document.querySelector(`[data-grid-id="${id}"]`);
-    if (widgetElement) {
-      widgetElement.classList.add('deleting');
-      
-      // Wait for animation to complete before removing
-      setTimeout(() => {
-        removeWidget(id);
-        toast.success('Widget deleted successfully!', {
-          position: "top-right",
-          autoClose: 2000
-        });
-      }, 500);
+  const handleRemoveWidget = async (id: string) => {
+    try {
+      const widgetElement = document.querySelector(`[data-grid-id="${id}"]`);
+      if (widgetElement) {
+        widgetElement.classList.add('deleting');
+        setTimeout(() => {
+          removeWidget(id); // Only remove from dashboard
+          toast.success('Widget removed from dashboard');
+        }, 500);
+      }
+    } catch (error) {
+      console.error('Error removing widget:', error);
+      toast.error('Failed to remove widget');
     }
   };
 
-  // Update the defaultLayout calculation to consider widget sizes
+  // Update the defaultLayout calculation
   const defaultLayout = widgets.map((widget, index) => {
-    let w = 4; // default width
-    let h = 3; // default height
-    
-    // Adjust grid units based on widget size
-    if ('style_size' in widget) {
-      switch(widget.style_size) {
-        case 'small':
-          w = 3;
-          h = 2;
-          break;
-        case 'medium':
-          w = 4;
-          h = 3;
-          break;
-        case 'large':
-          w = 5;
-          h = 4;
-          break;
-      }
+    const sizeClass = isKPIWidget(widget) ? widget.style_size || 'medium' : 'medium';
+    let w = 4, h = 3; // default medium size
+
+    switch(sizeClass) {
+      case 'small':
+        w = 3;
+        h = 2;
+        break;
+      case 'medium':
+        w = 4;
+        h = 3;
+        break;
+      case 'large':
+        w = 5;
+        h = 4;
+        break;
     }
 
     return {
@@ -986,62 +1053,67 @@ const DashboardPage: React.FC = () => {
   };
 
   // Add this function to render KPI widgets
-  const renderWidget = (widget: Widget | DashboardKPICard) => {
-    if ('type' in widget && widget.type === 'kpi') {
-      const kpiWidget = widget as DashboardKPICard;
+  const renderWidget = (widget: LocalWidget | DashboardKPICard) => {
+    if (isKPIWidget(widget)) {
+      const kpiWidget = widget;
       const isFlipped = flippedCardId === kpiWidget.id;
       const sizeClass = kpiWidget.style_size || 'medium';
       const currentIcon = kpiWidget.style_icon || 'Dashboard';
-
+      
       const handleContextMenu = (e: React.MouseEvent) => {
-        // Only trigger if Ctrl key is pressed
         if (e.ctrlKey) {
-          e.preventDefault(); // Prevent default context menu
+          e.preventDefault();
           setFlippedCardId(isFlipped ? null : kpiWidget.id);
         }
       };
 
       return (
         <div 
-          className={`kpi-card-container ${isFlipped ? 'flipped' : ''}`}
+          className={`widget-item ${sizeClass}`}
           onContextMenu={handleContextMenu}
-          data-tooltip={isFlipped ? 'Click anywhere to unflip' : 'Ctrl + Right Click to flip'}
         >
-          <div className="kpi-card-flipper">
-            {/* Front of card */}
-            <div className={`kpi-card front ${sizeClass}`}>
-              <div className="background-icon">
-                {iconMap[currentIcon]}
+          <div className={`kpi-card-container ${isFlipped ? 'flipped' : ''}`}>
+            <div className="kpi-card-flipper">
+              <div className={`kpi-card front ${sizeClass}`}>
+                <div className="background-icon">
+                  {iconMap[currentIcon]}
+                </div>
+                <h3 className="kpi-card-title">{kpiWidget.kpi_name}</h3>
+                <div className="kpi-card-content">
+                  <div className="kpi-value">{kpiWidget.field_value}</div>
+                  <div className="kpi-name">{kpiWidget.field_name}</div>
+                  <div className="kpi-source">Source {kpiWidget.video_source}</div>
+                  <div className="kpi-count">
+                    Count: {kpiWidget.field_value}
+                  </div>
+                </div>
               </div>
-              <h3 className="kpi-card-title">{kpiWidget.kpi_name}</h3>
-              <div className="kpi-card-content">
-                <div className="kpi-value">{kpiWidget.field_value}</div>
-                <div className="kpi-name">{kpiWidget.field_name}</div>
-                <div className="kpi-source">Source {kpiWidget.video_source}</div>
-              </div>
-            </div>
-
-            {/* Back of card */}
-            <div className="kpi-card back">
-              <div className="card-options">
-                <button 
-                  className="card-option-btn edit"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setEditMode(kpiWidget.id);
-                  }}
-                >
-                  <EditIcon />
-                </button>
-                <button 
-                  className="card-option-btn remove"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleRemoveWidget(kpiWidget.id);
-                  }}
-                >
-                  <DeleteIcon />
-                </button>
+              <div className="kpi-card back">
+                <div className="card-options">
+                  <button 
+                    className="card-option-btn edit"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setEditMode(kpiWidget.id);
+                    }}
+                  >
+                    <EditIcon />
+                  </button>
+                  <button 
+                    className="card-option-btn remove"
+                    onClick={(e) => {
+                      e.preventDefault();  // Prevent default behavior
+                      e.stopPropagation(); // Stop event propagation
+                      handleRemoveWidget(kpiWidget.id);
+                    }}
+                    onMouseDown={(e) => {
+                      e.preventDefault();  // Prevent drag start
+                      e.stopPropagation();
+                    }}
+                  >
+                    <DeleteIcon />
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -1144,6 +1216,74 @@ const DashboardPage: React.FC = () => {
     });
   };
 
+  useEffect(() => {
+    // Listen for connection errors
+    socket.on('connectionError', (error: { kpi_name: string, message: string }) => {
+      toast.error(`Connection error for ${error.kpi_name}: ${error.message}`, {
+        position: "top-right",
+        autoClose: 5000,
+      });
+    });
+
+    return () => {
+      socket.off('connectionError');
+    };
+  }, []);
+
+  // Update the socket effect to handle multiple cards
+  useEffect(() => {
+    socket.on('kpiUpdate', (data: { 
+      kpi_name: string, 
+      updates: Array<{ 
+        videoSource: string,
+        rule: string,
+        count: number,
+        totalCount: number,
+        updateCount: number,
+        timestamp: Date,
+        collection: string
+      }> 
+    }) => {
+      console.log('Received KPI update:', data);
+      
+      setWidgets(currentWidgets => {
+        const updatedWidgets = currentWidgets.map(widget => {
+          if (isKPIWidget(widget)) {
+            const update = data.updates.find(u => 
+              widget.kpi_name === data.kpi_name && 
+              widget.video_source === u.videoSource
+            );
+
+            if (update) {
+              console.log(`Updating widget ${widget.kpi_name}:`, update);
+              return {
+                ...widget,
+                field_value: update.updateCount.toString(),
+                update_count: update.updateCount,
+                total_count: update.totalCount,
+                last_updated: new Date(update.timestamp)
+              } as LocalWidget;
+            }
+          }
+          return widget;
+        });
+
+        console.log('Updated widgets:', updatedWidgets);
+        return updatedWidgets;
+      });
+    });
+
+    socket.on('connect_error', (error) => {
+      console.error('Socket connection error:', error);
+      toast.error('Connection error: Unable to receive updates');
+    });
+
+    return () => {
+      socket.off('kpiUpdate');
+      socket.off('connect_error');
+    };
+  }, [setWidgets]);
+
   return (
     <div className="dashboard-container">
       <ToastContainer />
@@ -1165,29 +1305,23 @@ const DashboardPage: React.FC = () => {
             className="layout"
             layouts={{ lg: defaultLayout }}
             breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
-            cols={{ lg: 12, md: 9, sm: 6, xs: 4, xxs: 2 }}
-            rowHeight={60}
-            onLayoutChange={onLayoutChange}
+            cols={{ lg: 12, md: 10, sm: 6, xs: 4, xxs: 2 }}
+            rowHeight={100}
             isDraggable={true}
             isResizable={false}
-            margin={[16, 16]}
-            containerPadding={[16, 16]}
-            preventCollision={false}
-            compactType={null}
+            margin={[10, 10]}
+            containerPadding={[0, 0]}
+            onLayoutChange={onLayoutChange}
             useCSSTransforms={true}
-            style={{ 
-              background: 'transparent',
-              minHeight: '100vh'
-            }}
-            autoSize={true}
-            verticalCompact={false}
-            draggableHandle=".kpi-card.front"
+            compactType="vertical"
+            preventCollision={false}
           >
             {widgets.map(widget => (
               <div 
                 key={widget.id} 
-                className="widget-item"
+                className="widget-wrapper"
                 data-grid-id={widget.id}
+                style={{ height: '100%' }}
               >
                 {renderWidget(widget)}
               </div>

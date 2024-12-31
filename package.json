@@ -42,6 +42,7 @@
     "highcharts": "^11.4.8",
     "highcharts-more": "^0.1.7",
     "highcharts-react-official": "^3.2.1",
+    "mongoose": "^8.9.3",
     "plotly.js": "^2.35.2",
     "re-resizable": "^6.10.1",
     "react": "^18.2.0",

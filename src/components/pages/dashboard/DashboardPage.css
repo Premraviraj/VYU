@@ -89,12 +89,9 @@
 
 /* Widgets Display */
 .widgets-display {
-  position: relative;
-  width: 100%;
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 16px;
-  background: transparent;
+  padding: 20px;
+  height: calc(100vh - 80px); /* Subtract header height */
+  overflow: auto;
 }
 
 .widgets-grid {
@@ -522,6 +519,7 @@
   --min-column-width: 250px;
   max-width: 1400px;
   margin: 0 auto;
+  margin-top: 0 !important;
 }
 
 /* Responsive grid adjustments */
@@ -598,6 +596,8 @@
   justify-content: center;
   align-items: center;
   max-width: 300px;
+  padding: 0 !important;
+  margin: 0 !important;
 }
 
 .react-grid-item > .widget-item {
@@ -1601,4 +1601,154 @@
 .widget-item.small .kpi-card-container,
 .widget-item.small .kpi-card.front {
   transform: none !important;
+}
+
+.kpi-card-header {
+  padding-bottom: 0.75rem;
+  margin-bottom: 0.75rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.kpi-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.kpi-source,
+.kpi-collection {
+  font-size: 0.875rem;
+  color: #666;
+  padding: 0.25rem 0;
+}
+
+/* Add hover message animations */
+.blank-window .kpi-card {
+  position: relative;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.blank-window .kpi-card .hover-message {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.9);
+  background: rgba(79, 70, 229, 0.95);
+  color: white;
+  padding: 8px 16px;
+  border-radius: 4px;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 10;
+  font-size: 0.9rem;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.blank-window .kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(79, 70, 229, 0.15);
+}
+
+.blank-window .kpi-card:hover .hover-message {
+  opacity: 1;
+  visibility: visible;
+  transform: translate(-50%, -50%) scale(1);
+  animation: pulseMessage 2s infinite;
+}
+
+@keyframes pulseMessage {
+  0% {
+    transform: translate(-50%, -50%) scale(1);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.05);
+    box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  }
+}
+
+.widget-wrapper {
+  height: auto !important;
+  width: 100% !important;
+  padding: 5px;
+  box-sizing: border-box;
+}
+
+.widget-item {
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  display: flex;
+  align-items: flex-start;
+}
+
+.kpi-card-container {
+  height: 100%;
+  width: 100%;
+  min-height: 150px;
+  max-height: 200px;
+}
+
+.react-grid-item {
+  display: flex !important;
+  align-items: flex-start !important;
+  justify-content: center !important;
+  height: auto !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Ensure proper grid positioning */
+.react-grid-layout {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+
+.react-grid-item.react-grid-placeholder {
+  height: 100% !important;
+  max-height: 200px !important;
+  background: rgba(79, 70, 229, 0.2) !important;
+  border-radius: 8px;
+}
+.blank-window .kpi-card .delete-card-btn {
+  background: none;
+  border: none;
+  color: #666;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  opacity: 0;
+  visibility: hidden;
+  position: absolute;
+  right: 8px;
+  top: 8px;
+}
+
+.blank-window .kpi-card:hover .delete-card-btn {
+  opacity: 1;
+  visibility: visible;
+}
+
+.blank-window .kpi-card .delete-card-btn:hover {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+  transform: scale(1.1);
+}
+
+.blank-window .kpi-card .delete-card-btn svg {
+  width: 30px;
+  height: 30px;
+}
+
+.blank-window .kpi-card .delete-card-btn:active {
+  transform: scale(0.95);
 }
