@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, memo, useCallback, useMemo, useRef } from 'react';
 import { VehicleStats } from '../../../data/vehicleData';
 import { 
   KPIModalProps,
@@ -23,6 +23,7 @@ import {
 import { kpiApi } from '../../../api/kpiApi';
 import { toast } from 'react-hot-toast';
 import ClipLoader from "react-spinners/ClipLoader";
+import { Virtuoso } from 'react-virtuoso';
 
 // Add debounce utility at the top of the file
 const debounce = (fn: Function, ms = 300) => {
@@ -175,7 +176,116 @@ interface DataItem {
   Count: number;
 }
 
-const KPIModal: React.FC<KPIModalProps> = ({ isOpen, onClose, selectedData, onKPICreated }) => {
+// Memoize the rule card component
+const RuleCard = memo(({ rule, count, isSelected, onSelect, onRemove }: {
+  rule: string;
+  count: number;
+  isSelected: boolean;
+  onSelect: () => void;
+  onRemove: (e: React.MouseEvent) => void;
+}) => (
+  <div 
+    className={`rule-card ${isSelected ? 'selected' : ''}`}
+    onClick={onSelect}
+  >
+    <div className="rule-card-header">
+      <h5>{rule}</h5>
+      <span className="rule-count-badge">
+        {typeof count === 'number' ? count : 0}
+      </span>
+    </div>
+    {isSelected && (
+      <button 
+        className="remove-rule"
+        onClick={onRemove}
+      >
+        ×
+      </button>
+    )}
+  </div>
+));
+
+// Memoize the collection card component
+const CollectionCard = memo(({ 
+  collection, 
+  isSelected, 
+  videoSources, 
+  selectedSource,
+  onCollectionClick,
+  onSourceClick,
+  rawData,
+  selectedRules,
+  onRuleSelect
+}: any) => {
+  const parentRef = useRef(null);
+
+  return (
+    <div 
+      className={`collection-card ${isSelected ? 'expanded' : ''}`}
+      onClick={() => onCollectionClick(collection)}
+    >
+      <div className="collection-header">
+        <StorageRounded className="collection-icon" />
+        <h3>{collection}</h3>
+      </div>
+      
+      {isSelected && (
+        <div className="expanded-content">
+          <div className="content-wrapper">
+            <div className="video-source-section">
+              <h4>Video Sources</h4>
+              <div className="source-buttons">
+                {videoSources.map((source: string) => (
+                  <button
+                    key={source}
+                    className={`source-button ${selectedSource === source ? 'selected' : ''}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onSourceClick(source);
+                    }}
+                  >
+                    Source {source}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="rules-section">
+              <h4>Rule Counts</h4>
+              {rawData && (
+                <div className="rules-grid">
+                  <Virtuoso
+                    style={{ height: '400px' }}
+                    totalCount={Object.entries(rawData.ruleCounts || rawData.fieldCounts || {}).length}
+                    itemContent={index => {
+                      const [rule, count] = Object.entries(rawData.ruleCounts || rawData.fieldCounts || {})[index];
+                      return (
+                        <RuleCard
+                          key={`${rule}-${index}`}
+                          rule={rule}
+                          count={count as number}
+                          isSelected={selectedRules.some((r: any) => r.rule === rule)}
+                          onSelect={() => onRuleSelect(rule, count as number)}
+                          onRemove={(e) => {
+                            e.stopPropagation();
+                            onRuleSelect(rule, count as number);
+                          }}
+                        />
+                      );
+                    }}
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+});
+
+// Update the main component
+const KPIModal: React.FC<KPIModalProps> = memo(({ isOpen, onClose, selectedData, onKPICreated }) => {
   const [kpiTitle, setKpiTitle] = useState('');
   const [kpiFields, setKpiFields] = useState<KPIField[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -556,8 +666,8 @@ const KPIModal: React.FC<KPIModalProps> = ({ isOpen, onClose, selectedData, onKP
     }
   };
 
-  // Update handleCollectionClick function to match WidgetsPage
-  const handleCollectionClick = async (collectionName: string) => {
+  // Memoize handlers
+  const handleCollectionClick = useCallback(async (collectionName: string) => {
     try {
       setSelectedCollection(collectionName);
       
@@ -643,10 +753,9 @@ const KPIModal: React.FC<KPIModalProps> = ({ isOpen, onClose, selectedData, onKP
       console.error('Error fetching data:', error);
       toast.error(`Failed to load data for ${collectionName}`);
     }
-  };
+  }, []);
 
-  // Update handleSourceClick function
-  const handleSourceClick = async (source: string) => {
+  const handleSourceClick = useCallback(async (source: string) => {
     try {
       const response = await fetch(
         `${API_URL}/api/v1/Collection/filtered/count?collection=${encodeURIComponent(selectedCollection)}&VideoSource=${encodeURIComponent(source)}`,
@@ -678,151 +787,38 @@ const KPIModal: React.FC<KPIModalProps> = ({ isOpen, onClose, selectedData, onKP
       console.error('Error fetching data:', error);
       toast.error(`Failed to load data for video source ${source}`);
     }
-  };
+  }, [selectedCollection]);
 
-  // Update the renderSourceData function
-  const renderSourceData = () => {
-    if (!selectedVideoSource || !rawData) return null;
+  const handleRuleSelect = useCallback((rule: string, count: number) => {
+    const isAlreadySelected = selectedRules.some(r => r.rule === rule);
+    
+    setSelectedRules(prev => {
+      if (isAlreadySelected) {
+        return prev.filter(r => r.rule !== rule);
+      }
+      return [...prev, { 
+        rule, 
+        count, 
+        source: selectedVideoSource 
+      }];
+    });
 
-    return (
-      <div className="source-data-section">
-        <h4>Rules for Source {selectedVideoSource}</h4>
-        <div className="rules-grid">
-          {Object.entries(availableFields).map(([rule, count], index) => (
-            <div key={`${rule}-${index}`} className="rule-card" onClick={(e) => e.stopPropagation()}>
-              <div className="rule-card-header">
-                <h5>{rule}</h5>
-                <span className="rule-count-badge">
-                  {typeof count === 'number' ? count : 0}
-                </span>
-              </div>
-              <div className="rule-card-body">
-                <div className="rule-info">
-                  <span className="source-label">Source:</span>
-                  <span className="source-value">{selectedVideoSource}</span>
-                </div>
-                <div className="rule-info">
-                  <span className="update-label">Last Updated:</span>
-                  <span className="update-value">
-                    {new Date().toLocaleTimeString()}
-                  </span>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  };
+    console.log('Selected rule:', { rule, count, source: selectedVideoSource });
+  }, [selectedVideoSource, selectedRules]);
 
-  // Update the renderDataSelection function to include the preview section
-  const renderDataSelection = () => (
-    <div className="config-section data-selection">
-      <h3>Data Selection</h3>
-      
-      <div className="data-selection-section">
-        {isLoading ? (
-          <div className="loading-container">
-            <ClipLoader size={50} color="#4f46e5" />
-            <span className="loading-text">Loading Collections...</span>
-          </div>
-        ) : (
-          <>
-            <div className="collections-grid">
-              {availableCollections.map(collection => (
-                <div
-                  key={collection}
-                  className={`collection-card ${selectedCollection === collection ? 'expanded' : ''}`}
-                  onClick={() => handleCollectionClick(collection)}
-                >
-                  <div className="collection-header">
-                    <StorageRounded className="collection-icon" />
-                    <h3>{collection}</h3>
-                  </div>
-                  
-                  {/* Expanded content */}
-                  {selectedCollection === collection && (
-                    <div className="expanded-content">
-                      <div className="content-wrapper">
-                        <div className="video-source-section">
-                          <h4>Video Sources</h4>
-                          <div className="source-buttons">
-                            {availableVideoSources.map(source => (
-                              <button
-                                key={source}
-                                className={`source-button ${selectedVideoSource === source ? 'selected' : ''}`}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleSourceClick(source);
-                                }}
-                              >
-                                Source {source}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-
-                        <div className="rules-section">
-                          <h4>Rule Counts</h4>
-                          {rawData && (
-                            <div className="rules-grid">
-                              {Object.entries(rawData.ruleCounts || rawData.fieldCounts || {}).map(([rule, count], index) => (
-                                <div 
-                                  key={`${rule}-${index}`} 
-                                  className={`rule-card ${selectedRules.some(r => r.rule === rule) ? 'selected' : ''}`}
-                                  onClick={() => handleRuleSelect(rule, count as number)}
-                                >
-                                  <div className="rule-card-header">
-                                    <h5>{rule}</h5>
-                                    <span className="rule-count-badge">
-                                      {typeof count === 'number' ? count : 0}
-                                    </span>
-                                  </div>
-                                  {selectedRules.some(r => r.rule === rule) && (
-                                    <button 
-                                      className="remove-rule"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setSelectedRules(prev => prev.filter(r => r.rule !== rule));
-                                      }}
-                                    >
-                                      ×
-                                    </button>
-                                  )}
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-
-            {/* Add Selected Rules Preview Section */}
-            {selectedRules.length > 0 && (
-              <div className="selected-rules-preview">
-                <h4>Selected Rules</h4>
-                <div className="selected-rules-grid">
-                  {selectedRules.map((rule, index) => (
-                    <div key={index} className="preview-rule-card">
-                      <div className="preview-rule-info">
-                        <span className="preview-rule-name">{rule.rule}</span>
-                        <span className="preview-rule-source">Source {rule.source}</span>
-                      </div>
-                      <span className="preview-rule-count">{rule.count}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </>
-        )}
-      </div>
-    </div>
+  // Memoize computed values
+  const sortedCollections = useMemo(() => 
+    [...availableCollections].sort(),
+    [availableCollections]
   );
+
+  const sortedVideoSources = useMemo(() => 
+    [...availableVideoSources].sort((a, b) => Number(a) - Number(b)),
+    [availableVideoSources]
+  );
+
+  // Memoize the preview content
+  const previewContent = useMemo(() => getPreviewContent(), [selectedRules]);
 
   // Update the styles constant
   const styles = `
@@ -1153,24 +1149,6 @@ const KPIModal: React.FC<KPIModalProps> = ({ isOpen, onClose, selectedData, onKP
     }
   }, [isOpen]);
 
-  // Update the handleRuleSelect function
-  const handleRuleSelect = (rule: string, count: number) => {
-    const isAlreadySelected = selectedRules.some(r => r.rule === rule);
-    
-    setSelectedRules(prev => {
-      if (isAlreadySelected) {
-        return prev.filter(r => r.rule !== rule);
-      }
-      return [...prev, { 
-        rule, 
-        count, 
-        source: selectedVideoSource 
-      }];
-    });
-
-    console.log('Selected rule:', { rule, count, source: selectedVideoSource });
-  };
-
   if (!isOpen) return null;
 
   return (
@@ -1182,7 +1160,6 @@ const KPIModal: React.FC<KPIModalProps> = ({ isOpen, onClose, selectedData, onKP
         </div>
         
         <div className="kpi-modal-content">
-          {/* Title Input */}
           <div className="config-section">
             <h3>Card Title</h3>
             <input
@@ -1194,14 +1171,67 @@ const KPIModal: React.FC<KPIModalProps> = ({ isOpen, onClose, selectedData, onKP
             />
           </div>
 
-          {renderDataSelection()}
+          <div className="config-section data-selection">
+            <h3>Data Selection</h3>
+            
+            <div className="data-selection-section">
+              {isLoading ? (
+                <div className="loading-container">
+                  <ClipLoader size={50} color="#4f46e5" />
+                  <span className="loading-text">Loading Collections...</span>
+                </div>
+              ) : (
+                <>
+                  <Virtuoso
+                    style={{ height: '500px' }}
+                    totalCount={sortedCollections.length}
+                    itemContent={index => (
+                      <CollectionCard
+                        key={sortedCollections[index]}
+                        collection={sortedCollections[index]}
+                        isSelected={selectedCollection === sortedCollections[index]}
+                        videoSources={sortedVideoSources}
+                        selectedSource={selectedVideoSource}
+                        onCollectionClick={handleCollectionClick}
+                        onSourceClick={handleSourceClick}
+                        rawData={rawData}
+                        selectedRules={selectedRules}
+                        onRuleSelect={handleRuleSelect}
+                      />
+                    )}
+                  />
 
-          {/* Preview Section */}
+                  {selectedRules.length > 0 && (
+                    <div className="selected-rules-preview">
+                      <h4>Selected Rules</h4>
+                      <Virtuoso
+                        style={{ height: '200px' }}
+                        totalCount={selectedRules.length}
+                        itemContent={index => {
+                          const rule = selectedRules[index];
+                          return (
+                            <div key={index} className="preview-rule-card">
+                              <div className="preview-rule-info">
+                                <span className="preview-rule-name">{rule.rule}</span>
+                                <span className="preview-rule-source">Source {rule.source}</span>
+                              </div>
+                              <span className="preview-rule-count">{rule.count}</span>
+                            </div>
+                          );
+                        }}
+                      />
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+
           <div className="config-section">
             <h3>Preview</h3>
             <div className="kpi-preview">
               <div className="kpi-preview-container">
-                {getPreviewContent()}
+                {previewContent}
               </div>
             </div>
           </div>
@@ -1218,6 +1248,6 @@ const KPIModal: React.FC<KPIModalProps> = ({ isOpen, onClose, selectedData, onKP
       </div>
     </div>
   );
-};
+});
 
 export default KPIModal; 

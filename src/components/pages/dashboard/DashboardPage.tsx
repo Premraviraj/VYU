@@ -421,21 +421,73 @@ const BlankWindow: React.FC<BlankWindowProps> = ({ setIsBlankWindowOpen, addWidg
     }
   };
 
-  const handleCardClick = (card: KPICardData) => {
-    const newWidget: DashboardKPICard = {
-      id: `kpi-${Date.now()}`,
-      kpi_name: card.kpi_name,
-      field_value: (card.update_count || '0').toString(),
-      field_name: card.field_name,
-      video_source: card.video_source,
-      style_size: card.style_size,
-      style_color: card.style_color,
-      style_icon: card.style_icon
-    };
+  const handleCardClick = async (card: KPICardData) => {
+    try {
+      // First get the initial count
+      const collectionResponse = await fetch(
+        `${API_URL}/api/v1/Collection/filtered/count?collection=${card.collection_name}&videoSource=${card.video_source}&rule=${card.rule_name}`,
+        {
+          credentials: 'include'
+        }
+      );
+      
+      const countData = await collectionResponse.json();
+      const currentCount = countData?.count || 0;
 
-    addWidget(newWidget);
-    setIsBlankWindowOpen(false);
-    toast.success('Widget added successfully!');
+      const newWidget: DashboardKPICard = {
+        id: `kpi-${Date.now()}`,
+        kpi_name: card.kpi_name,
+        field_value: currentCount.toString(),
+        field_name: card.field_name,
+        video_source: card.video_source,
+        style_size: card.style_size,
+        style_color: card.style_color,
+        style_icon: card.style_icon,
+        total_count: currentCount,
+        update_count: currentCount
+      };
+
+      // Register the new KPI with the backend
+      socket.emit('registerKPI', {
+        kpiName: card.kpi_name,
+        config: {
+          apiUrl: card.collection_name,
+          requestParams: {
+            videoSource: card.video_source,
+            rule: card.rule_name
+          }
+        }
+      });
+
+      // Wait for initial update before adding widget
+      const initialUpdate = await new Promise((resolve) => {
+        const timeout = setTimeout(() => resolve(null), 2000); // 2s timeout
+        
+        const handleInitialUpdate = (data: any) => {
+          if (data.kpi_name === card.kpi_name) {
+            clearTimeout(timeout);
+            socket.off('kpiUpdate', handleInitialUpdate);
+            resolve(data);
+          }
+        };
+        
+        socket.on('kpiUpdate', handleInitialUpdate);
+      });
+
+      if (initialUpdate) {
+        const update = (initialUpdate as any).updates[0];
+        newWidget.field_value = update.updateCount.toString();
+        newWidget.total_count = update.totalCount;
+        newWidget.update_count = update.updateCount;
+      }
+
+      addWidget(newWidget);
+      setIsBlankWindowOpen(false);
+      toast.success('Widget added successfully!');
+    } catch (error: any) {
+      console.error('Error adding widget:', error);
+      toast.error(error.message || 'Failed to add widget');
+    }
   };
 
   // Add this function to handle card deletion
